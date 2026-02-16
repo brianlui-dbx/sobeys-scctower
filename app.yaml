@@ -1,0 +1,30 @@
+command:
+  - "uvicorn"
+  - "backend.main:app"
+  - "--host"
+  - "0.0.0.0"
+  - "--port"
+  - "8000"
+  - "--timeout-keep-alive"
+  - "75"
+  - "--no-access-log"
+
+requirements:
+  - "backend/requirements.txt"
+
+env:
+  - name: DATABRICKS_HOST
+    value: "https://e2-demo-west.cloud.databricks.com"
+  #Need to add PAT with name "DATABRICKS_TOKEN" here
+  - name: DATABRICKS_HTTP_PATH
+    value: "/sql/1.0/warehouses/75fd8278393d07eb"
+  - name: DATABRICKS_CATALOG
+    value: "retail_consumer_goods"
+  - name: DATABRICKS_SCHEMA
+    value: "supply_chain_control_tower"
+  - name: DATABRICKS_CHAT_ENDPOINT
+    value: "https://e2-demo-west.cloud.databricks.com/serving-endpoints"
+  - name: DATABRICKS_CHAT_MODEL
+    value: "mas-27ea9897-endpoint"
+  - name: DATABRICKS_GENERAL_MODEL
+    value: "databricks-gpt-5-1"
