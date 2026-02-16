@@ -15,7 +15,8 @@ requirements:
 env:
   - name: DATABRICKS_HOST
     value: "https://e2-demo-west.cloud.databricks.com"
-  #Need to add PAT with name "DATABRICKS_TOKEN" here
+  - name: DATABRICKS_TOKEN
+    value: "${DATABRICKS_TOKEN}"
   - name: DATABRICKS_HTTP_PATH
     value: "/sql/1.0/warehouses/75fd8278393d07eb"
   - name: DATABRICKS_CATALOG
