@@ -1,0 +1,12 @@
+bundle:
+  name: sobeys-scctower
+
+include:
+  - resources/*.yml
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      profile: sobeys-demo-stable

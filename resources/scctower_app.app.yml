@@ -1,0 +1,6 @@
+resources:
+  apps:
+    scctower:
+      name: scctower-${bundle.target}
+      description: "Supply Chain Control Tower"
+      source_code_path: ..

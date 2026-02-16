@@ -14,7 +14,7 @@ requirements:
 
 env:
   - name: DATABRICKS_HOST
-    value: "https://e2-demo-west.cloud.databricks.com"
+    value: "https://adb-7405618329303299.19.azuredatabricks.net"
   - name: DATABRICKS_TOKEN
     value: "${DATABRICKS_TOKEN}"
   - name: DATABRICKS_HTTP_PATH
