@@ -120,8 +120,21 @@ def clear_cache():
     _cache.clear()
 
 # Database connection helper
-def get_databricks_data(query: str, cache_key: Optional[str] = None, ttl_seconds=300):
-    """Fetch data from Databricks with optional caching"""
+def _run_databricks_query(query: str, host: str, http_path: str, token: str):
+    """Execute a query against Databricks and return a DataFrame."""
+    with sql.connect(
+        server_hostname=host.replace("https://", ""),
+        http_path=http_path,
+        access_token=token
+    ) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            return cursor.fetchall_arrow().to_pandas()
+
+
+def get_databricks_data(query: str, cache_key: Optional[str] = None, ttl_seconds=300, timeout: Optional[int] = None):
+    """Fetch data from Databricks with optional caching and timeout."""
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError
     # Check cache first
     if cache_key:
         cached_data = get_from_cache(cache_key)
@@ -136,20 +149,25 @@ def get_databricks_data(query: str, cache_key: Optional[str] = None, ttl_seconds
         raise HTTPException(status_code=500, detail="Databricks credentials not configured")
 
     try:
-        with sql.connect(
-            server_hostname=databricks_host.replace("https://", ""),
-            http_path=databricks_http_path,
-            access_token=databricks_token
-        ) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(query)
-                df = cursor.fetchall_arrow().to_pandas()
+        if timeout is not None:
+            executor = ThreadPoolExecutor(max_workers=1)
+            future = executor.submit(_run_databricks_query, query, databricks_host, databricks_http_path, databricks_token)
+            try:
+                df = future.result(timeout=timeout)
+            except TimeoutError:
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
+            executor.shutdown(wait=False)
+        else:
+            df = _run_databricks_query(query, databricks_host, databricks_http_path, databricks_token)
 
-                # Cache the result if cache_key provided
-                if cache_key:
-                    set_cache(cache_key, df, ttl_seconds)
+        # Cache the result if cache_key provided
+        if cache_key:
+            set_cache(cache_key, df, ttl_seconds)
 
-                return df
+        return df
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail=f"Database query timed out after {timeout}s")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
@@ -371,7 +389,7 @@ def get_executive_dashboard():
         if databricks_configured:
             try:
                 query = f"SELECT qty, unit_price FROM {table_name}"
-                df = get_databricks_data(query, cache_key="inventory_value_calc", ttl_seconds=300)
+                df = get_databricks_data(query, cache_key="inventory_value_calc", ttl_seconds=300, timeout=3)
 
                 # Calculate total value (qty * unit_price)
                 total_value = (df['qty'] * df['unit_price']).sum()
@@ -414,7 +432,7 @@ def get_executive_dashboard():
         if databricks_configured:
             try:
                 query = f"SELECT status, qty, unit_price FROM {table_name}"
-                df = get_databricks_data(query, cache_key="inventory_levels_calc", ttl_seconds=300)
+                df = get_databricks_data(query, cache_key="inventory_levels_calc", ttl_seconds=300, timeout=3)
 
                 # Calculate inventory by status
                 inventory_by_status = {}
