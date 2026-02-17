@@ -1,0 +1,7 @@
+location_id,location_name,type,location,latitude,longitude
+DC001,"Atlanta, GA",DC,"Atlanta, GA",33.749,-84.388
+DC002,"Boston, MA",DC,"Boston, MA",42.3601,-71.0589
+DC003,"Denver, CO",DC,"Denver, CO",39.7392,-104.9903
+DC004,"Phoenix, AZ",DC,"Phoenix, AZ",33.4484,-112.074
+DC005,"Sacramento, CA",DC,"Sacramento, CA",38.5816,-121.4944
+DOCK001,Houston Dock,Dock,"Houston, TX",29.7604,-95.3698

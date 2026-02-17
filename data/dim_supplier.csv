@@ -1,0 +1,21 @@
+supplier_id,name,location,latitude,longitude
+SUPP001,Green Valley Produce Co.,"Salinas, CA",36.6777,-121.6555
+SUPP002,FreshHarvest Farms,"Watsonville, CA",36.9101,-121.7569
+SUPP003,Sunrise Organic Growers,"Oxnard, CA",34.1975,-119.1771
+SUPP004,Nature's Bounty Distributors,"Yuma, AZ",32.6927,-114.6277
+SUPP005,Golden Fields Agriculture,"Bakersfield, CA",35.3733,-119.0187
+SUPP006,Prime Produce Partners,"Fresno, CA",36.7378,-119.7871
+SUPP007,Coastal Fresh Farms,"Immokalee, FL",26.4187,-81.4173
+SUPP008,Mountain View Organics,"Plant City, FL",28.0186,-82.1126
+SUPP009,Riverside Growers Co-op,"Yakima, WA",46.6021,-120.5059
+SUPP010,Valley Fresh Produce,"Wenatchee, WA",47.4235,-120.3103
+SUPP011,Heritage Farms Supply,"McAllen, TX",26.2034,-98.23
+SUPP012,Evergreen Produce Group,"Brownsville, TX",25.9017,-97.4975
+SUPP013,Pacific Fresh Distributors,"Miami, FL",25.7617,-80.1918
+SUPP014,Summit Agriculture Co.,"San Diego, CA",32.7157,-117.1611
+SUPP015,Desert Fresh Farms,"Santa Maria, CA",34.953,-120.4357
+SUPP016,Heartland Produce Alliance,"Palisade, CO",39.11,-108.3509
+SUPP017,Ocean Breeze Organics,"Hood River, OR",45.7054,-121.5214
+SUPP018,Prairie Fresh Growers,"King City, CA",36.2128,-121.1257
+SUPP019,Sunshine Harvest Co.,"Hammonton, NJ",39.6365,-74.8021
+SUPP020,Lakeside Farm Collective,"Quincy, FL",30.5866,-84.5833

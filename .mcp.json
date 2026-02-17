@@ -2,8 +2,12 @@
   "mcpServers": {
     "databricks": {
       "command": "/Users/brian.lui/.ai-dev-kit/.venv/bin/python",
-      "args": ["/Users/brian.lui/.ai-dev-kit/repo/databricks-mcp-server/run_server.py"],
-      "env": {"DATABRICKS_CONFIG_PROFILE": "sobeys-demo-stable"}
+      "args": [
+        "/Users/brian.lui/.ai-dev-kit/repo/databricks-mcp-server/run_server.py"
+      ],
+      "env": {
+        "DATABRICKS_CONFIG_PROFILE": "sobeysagentsdbw"
+      }
     }
   }
 }

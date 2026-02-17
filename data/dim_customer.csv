@@ -1,0 +1,51 @@
+customer_id,name,location,latitude,longitude
+CUST001,FreshWay Supermarkets,"Cambridge, MA",42.3736,-71.1097
+CUST002,GreenGrocer Plus,"Quincy, MA",42.2529,-71.0023
+CUST003,Market Fresh Foods,"Newton, MA",42.337,-71.2092
+CUST004,Harvest Time Markets,"Somerville, MA",42.3876,-71.0995
+CUST005,Nature's Basket,"Brookline, MA",42.3318,-71.1212
+CUST006,Prime Choice Grocery,"Waltham, MA",42.3765,-71.2356
+CUST007,Fresh & Easy Markets,"Lynn, MA",42.4668,-70.9495
+CUST008,ValueMart Superstore,"Medford, MA",42.4184,-71.1062
+CUST009,Organic Essentials,"Arlington, MA",42.4154,-71.1565
+CUST010,Community Grocery Co-op,"Malden, MA",42.4251,-71.0662
+CUST011,Fresh Express Markets,"Roseville, CA",38.7521,-121.288
+CUST012,Everyday Grocers,"Elk Grove, CA",38.4088,-121.3716
+CUST013,Quality Foods Supermarket,"Folsom, CA",38.6779,-121.176
+CUST014,Neighborhood Market,"Davis, CA",38.5449,-121.7405
+CUST015,Fresh Start Markets,"Woodland, CA",38.6785,-121.7733
+CUST016,City Market,"Citrus Heights, CA",38.7071,-121.281
+CUST017,Corner Store Plus,"Rancho Cordova, CA",38.5891,-121.3027
+CUST018,Metro Fresh Foods,"Rocklin, CA",38.7907,-121.2358
+CUST019,Healthy Choice Market,"West Sacramento, CA",38.5805,-121.5302
+CUST020,Farm to Table Grocery,"Fair Oaks, CA",38.6519,-121.2644
+CUST021,Local Harvest Foods,"Scottsdale, AZ",33.4942,-111.9261
+CUST022,Green Earth Market,"Tempe, AZ",33.4255,-111.94
+CUST023,Pure & Simple Foods,"Mesa, AZ",33.4152,-111.8315
+CUST024,Sunshine Grocers,"Glendale, AZ",33.5387,-112.186
+CUST025,Fresh Picks Market,"Chandler, AZ",33.3062,-111.8413
+CUST026,The Natural Market,"Gilbert, AZ",33.3528,-111.789
+CUST027,Whole Earth Foods,"Peoria, AZ",33.5806,-112.2374
+CUST028,Fresh Valley Grocery,"Surprise, AZ",33.6292,-112.3679
+CUST029,Garden Fresh Market,"Avondale, AZ",33.4356,-112.3496
+CUST030,Organic Oasis,"Goodyear, AZ",33.4353,-112.3576
+CUST031,Good Food Co-op,"Marietta, GA",33.9526,-84.5499
+CUST032,Simple Market,"Roswell, GA",34.0232,-84.3616
+CUST033,Real Food Store,"Alpharetta, GA",34.0754,-84.2941
+CUST034,The Green Store,"Sandy Springs, GA",33.9304,-84.3786
+CUST035,Fresh Today Market,"Decatur, GA",33.7748,-84.2963
+CUST036,Clean Eats Grocery,"Lawrenceville, GA",33.9562,-83.988
+CUST037,Happy Health Foods,"Duluth, GA",34.0029,-84.1446
+CUST038,Pure Living Market,"Johns Creek, GA",34.0289,-84.1986
+CUST039,Better Choice Foods,"Smyrna, GA",33.884,-84.5144
+CUST040,Smart Shop Grocery,"Kennesaw, GA",34.0234,-84.6155
+CUST041,Eco Market,"Aurora, CO",39.7294,-104.8319
+CUST042,Natural Way Foods,"Lakewood, CO",39.7047,-105.0814
+CUST043,Fresh Life Market,"Thornton, CO",39.868,-104.9719
+CUST044,Green Choice Store,"Arvada, CO",39.8028,-105.0875
+CUST045,Organic Avenue,"Westminster, CO",39.8366,-105.0372
+CUST046,Farm Fresh Store,"Centennial, CO",39.5807,-104.8771
+CUST047,Whole Life Market,"Boulder, CO",40.015,-105.2705
+CUST048,Clean Plate Foods,"Englewood, CO",39.6478,-104.9878
+CUST049,Green Basket Market,"Littleton, CO",39.6133,-105.0166
+CUST050,Pure Harvest Foods,"Broomfield, CO",39.9205,-105.0867
