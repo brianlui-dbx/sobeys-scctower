@@ -27,6 +27,21 @@ USE DATABASE retail_consumer_goods;
 USE SCHEMA supply_chain_control_tower;
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Truncate all tables before loading
+-- ─────────────────────────────────────────────────────────────────────────────
+TRUNCATE TABLE IF EXISTS dim_customer;
+TRUNCATE TABLE IF EXISTS dim_product;
+TRUNCATE TABLE IF EXISTS dim_supplier;
+TRUNCATE TABLE IF EXISTS dim_storage_location;
+TRUNCATE TABLE IF EXISTS fact_dc_inventory;
+TRUNCATE TABLE IF EXISTS fact_incoming_supply;
+TRUNCATE TABLE IF EXISTS fact_shipping_schedule;
+TRUNCATE TABLE IF EXISTS fact_supplier_orders;
+TRUNCATE TABLE IF EXISTS inventory_realtime_v1;
+TRUNCATE TABLE IF EXISTS link_dc_customer;
+TRUNCATE TABLE IF EXISTS batch_events_v1;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- dim_customer
 -- ─────────────────────────────────────────────────────────────────────────────
 COPY INTO dim_customer (customer_id, name, location, latitude, longitude)
