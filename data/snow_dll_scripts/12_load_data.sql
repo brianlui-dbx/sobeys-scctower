@@ -116,8 +116,6 @@ COPY INTO link_dc_customer (link_id, location_id, customer_id, is_active, create
     NULL_IF = ('null', 'NULL', '')
     EMPTY_FIELD_AS_NULL = TRUE
     TRIM_SPACE = TRUE
-    TRUE_VALUES = ('true', 'True', 'TRUE')
-    FALSE_VALUES = ('false', 'False', 'FALSE')
   )
   ON_ERROR = 'ABORT_STATEMENT';
 
