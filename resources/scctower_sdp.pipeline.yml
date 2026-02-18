@@ -1,0 +1,13 @@
+resources:
+  pipelines:
+    scctower_sdp:
+      name: scctower_sdp
+      catalog: retail_consumer_goods
+      schema: supply_chain_control_tower
+      serverless: true
+      configuration:
+        spark.databricks.delta.enableTimestampNtz: "true"
+        fs.azure.account.key.stbrianl2slko0183juc.blob.core.windows.net: "<YOUR_TOKEN>"
+      libraries:
+        - glob:
+            include: ../jobs/scctower_sdp/**

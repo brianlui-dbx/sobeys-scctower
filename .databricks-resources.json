@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "resources": [
+    {
+      "type": "multi_agent_supervisor",
+      "name": "SCC_Tower_Supply_Chain_Supervisor",
+      "id": "5fba20e2-a75d-478e-a25c-deb9a9fb92ae",
+      "created_at": "2026-02-18T19:49:16.521885+00:00",
+      "updated_at": "2026-02-18T21:26:30.287690+00:00"
+    },
+    {
+      "type": "genie_space",
+      "name": "DC_inventory",
+      "id": "01f10d08873a12899de67764de57b526",
+      "created_at": "2026-02-18T20:29:31.128077+00:00",
+      "updated_at": "2026-02-18T20:29:31.128077+00:00"
+    }
+  ]
+}
