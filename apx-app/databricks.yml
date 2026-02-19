@@ -1,0 +1,33 @@
+bundle:
+  name: "sobeys-scctower-apx"
+
+sync:
+  include:
+    - .build
+
+artifacts:
+  default:
+    build: uv run apx build
+
+resources:
+  apps:
+    sobeys-scctower-app:
+      name: "sobeys-tower"
+      description: "Sobeys Supply Chain Control Tower"
+      source_code_path: ./.build
+      resources:
+        - name: "sql-warehouse"
+          sql_warehouse:
+            id: "b9771bcf4a3a5399"
+            permission: "CAN_USE"
+        - name: "mas-endpoint"
+          serving_endpoint:
+            name: "mas-5fba20e2-endpoint"
+            permission: "CAN_QUERY"
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      profile: sobeysagentsdbw

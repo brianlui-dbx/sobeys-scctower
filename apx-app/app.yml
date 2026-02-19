@@ -1,0 +1,15 @@
+command: ["uvicorn", "sobeys_scctower.backend.app:app", "--workers", "1"]
+
+env:
+  - name: SOBEYS_SCCTOWER_CATALOG
+    value: "snowflake_retail_consumer_goods"
+  - name: SOBEYS_SCCTOWER_SCHEMA
+    value: "supply_chain_control_tower"
+  - name: SOBEYS_SCCTOWER_WAREHOUSE_ID
+    value: "b9771bcf4a3a5399"
+  - name: SOBEYS_SCCTOWER_CHAT_ENDPOINT
+    value: "https://adb-7405613286317055.15.azuredatabricks.net/serving-endpoints"
+  - name: SOBEYS_SCCTOWER_CHAT_MODEL
+    value: "mas-5fba20e2-endpoint"
+  - name: SOBEYS_SCCTOWER_GENERAL_MODEL
+    value: "databricks-gpt-5-1"

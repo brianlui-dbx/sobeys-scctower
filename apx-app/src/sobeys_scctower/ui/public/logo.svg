@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <rect width="200" height="60" rx="6" fill="#0E5A19"/>
+  <text x="100" y="26" dominant-baseline="middle" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="700" font-size="22" fill="white" letter-spacing="1">SOBEYS</text>
+  <line x1="30" y1="36" x2="170" y2="36" stroke="#469E41" stroke-width="1.5"/>
+  <text x="100" y="49" dominant-baseline="middle" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="400" font-size="9" fill="#B8E6B8" letter-spacing="2">SUPPLY CHAIN CONTROL TOWER</text>
+</svg>

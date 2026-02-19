@@ -5,20 +5,17 @@ set -eo pipefail
 # deploy.sh — End-to-end deployment of the Supply Chain Control Tower
 #
 # Deploys the full stack into a Databricks workspace:
-#   1. Databricks Asset Bundle (app + SDP pipeline)
-#   2. CSV seed data → Unity Catalog Volume
-#   3. Runs the SDP pipeline to materialise tables
-#   4. Applies column-level comments for Genie
-#   5. Creates the demand-forecast UC function
-#   6. Creates Genie spaces from exported JSON
-#   7. Creates the MAS Supervisor Agent
-#   8. Deploys the Databricks App with updated config
+#   1. CSV seed data → Unity Catalog Volume
+#   2. Applies column-level comments for Genie
+#   3. Creates the demand-forecast UC function
+#   4. Creates Genie spaces from exported JSON
+#   5. Creates the MAS Supervisor Agent
 #
 # Usage:
 #   ./deploy.sh                          # full deploy with defaults
 #   ./deploy.sh --profile myprofile      # use a specific CLI profile
 #   ./deploy.sh --skip-data              # skip data upload
-#   ./deploy.sh --from-phase 5           # resume from a specific phase
+#   ./deploy.sh --from-phase N           # resume from a specific phase
 #   ./deploy.sh --help
 ###############################################################################
 
@@ -37,7 +34,7 @@ GENIE_FILES=(  "genie-spaces/DC_inventory.json" "genie-spaces/DC_Shipment_plan.j
 # MAS agent key that maps to each Genie name (same order as above)
 GENIE_MAS_KEYS=("dc_inventory" "dc_shipment_plan" "incoming_supply" "link_customer" "supplier_orders")
 
-# Populated during Phase 6 (same index order)
+# Populated during Phase 4 (same index order)
 GENIE_IDS=("" "" "" "" "")
 
 # Temp file for passing Genie IDs between phases
@@ -46,7 +43,6 @@ trap 'rm -f "$GENIE_ID_FILE"' EXIT
 
 # ─── Flags ───────────────────────────────────────────────────────────────────
 SKIP_DATA=false
-SKIP_PIPELINE=false
 FROM_PHASE=1
 DRY_RUN=false
 
@@ -113,9 +109,8 @@ Options:
   --profile NAME      Databricks CLI profile (default: \$DATABRICKS_PROFILE or none)
   --catalog NAME      Unity Catalog name (default: $CATALOG)
   --schema  NAME      Schema name (default: $SCHEMA)
-  --skip-data         Skip CSV data upload (Phase 2)
-  --skip-pipeline     Skip pipeline run (Phase 3)
-  --from-phase N      Start from phase N (1-8), skipping earlier phases
+  --skip-data         Skip CSV data upload (Phase 1)
+  --from-phase N      Start from phase N (1-5), skipping earlier phases
   --dry-run           Print what would happen without executing
   -h, --help          Show this help message
 EOF
@@ -128,7 +123,6 @@ while [[ $# -gt 0 ]]; do
     --catalog)       CATALOG="$2"; shift 2 ;;
     --schema)        SCHEMA="$2"; shift 2 ;;
     --skip-data)     SKIP_DATA=true; shift ;;
-    --skip-pipeline) SKIP_PIPELINE=true; shift ;;
     --from-phase)    FROM_PHASE="$2"; shift 2 ;;
     --dry-run)       DRY_RUN=true; shift ;;
     -h|--help)       usage ;;
@@ -162,24 +156,10 @@ if [[ "$DRY_RUN" == true ]]; then
 fi
 
 ###############################################################################
-# Phase 1: Deploy Databricks Asset Bundle
+# Phase 1: Upload CSV Seed Data to Volume
 ###############################################################################
 if [[ "$FROM_PHASE" -le 1 ]]; then
-  phase 1 "Deploy Databricks Asset Bundle"
-  log "Deploying app + SDP pipeline definition..."
-  if [[ "$DRY_RUN" == false ]]; then
-    dbcli bundle deploy \
-      --var "catalog=${CATALOG}" \
-      --var "schema=${SCHEMA}"
-    log "Bundle deployed."
-  fi
-fi
-
-###############################################################################
-# Phase 2: Upload CSV Seed Data to Volume
-###############################################################################
-if [[ "$FROM_PHASE" -le 2 ]]; then
-  phase 2 "Upload CSV Seed Data"
+  phase 1 "Upload CSV Seed Data"
 
   if [[ "$SKIP_DATA" == true ]]; then
     skip "data upload (--skip-data)"
@@ -202,31 +182,10 @@ if [[ "$FROM_PHASE" -le 2 ]]; then
 fi
 
 ###############################################################################
-# Phase 3: Run SDP Pipeline
+# Phase 2: Apply Column Comments
 ###############################################################################
-if [[ "$FROM_PHASE" -le 3 ]]; then
-  phase 3 "Run SDP Pipeline"
-
-  if [[ "$SKIP_PIPELINE" == true ]]; then
-    skip "pipeline run (--skip-pipeline)"
-  else
-    log "Triggering scctower_sdp pipeline..."
-    if [[ "$DRY_RUN" == false ]]; then
-      dbcli bundle run scctower_sdp \
-        --var "catalog=${CATALOG}" \
-        --var "schema=${SCHEMA}" || {
-        warn "Pipeline run command returned non-zero — check the Databricks UI for status."
-      }
-    fi
-    log "Pipeline triggered. Tables will materialise in ${FULL_SCHEMA}."
-  fi
-fi
-
-###############################################################################
-# Phase 4: Apply Column Comments
-###############################################################################
-if [[ "$FROM_PHASE" -le 4 ]]; then
-  phase 4 "Apply Column Comments"
+if [[ "$FROM_PHASE" -le 2 ]]; then
+  phase 2 "Apply Column Comments"
   log "Applying column-level comments for Genie curation..."
   if [[ "$DRY_RUN" == false ]]; then
     run_sql_file "scripts/apply_column_comments.sql"
@@ -235,10 +194,10 @@ if [[ "$FROM_PHASE" -le 4 ]]; then
 fi
 
 ###############################################################################
-# Phase 5: Create Demand Forecast UC Function
+# Phase 3: Create Demand Forecast UC Function
 ###############################################################################
-if [[ "$FROM_PHASE" -le 5 ]]; then
-  phase 5 "Demand Forecast — Model + UC Function"
+if [[ "$FROM_PHASE" -le 3 ]]; then
+  phase 3 "Demand Forecast — Model + UC Function"
 
   log "This phase has two parts:"
   log ""
@@ -266,10 +225,10 @@ if [[ "$FROM_PHASE" -le 5 ]]; then
 fi
 
 ###############################################################################
-# Phase 6: Create Genie Spaces
+# Phase 4: Create Genie Spaces
 ###############################################################################
-if [[ "$FROM_PHASE" -le 6 ]]; then
-  phase 6 "Create Genie Spaces"
+if [[ "$FROM_PHASE" -le 4 ]]; then
+  phase 4 "Create Genie Spaces"
 
   log "Creating ${#GENIE_NAMES[@]} Genie spaces from exported JSON..."
 
@@ -339,7 +298,7 @@ print(json.dumps(body))
     fi
   done
 
-  # Save IDs for Phase 7
+  # Save IDs for Phase 5
   for i in "${!GENIE_NAMES[@]}"; do
     echo "${GENIE_MAS_KEYS[$i]}=${GENIE_IDS[$i]}" >> "$GENIE_ID_FILE"
   done
@@ -351,10 +310,10 @@ print(json.dumps(body))
 fi
 
 ###############################################################################
-# Phase 7: Create MAS Supervisor Agent
+# Phase 5: Create MAS Supervisor Agent
 ###############################################################################
-if [[ "$FROM_PHASE" -le 7 ]]; then
-  phase 7 "Create MAS Supervisor Agent"
+if [[ "$FROM_PHASE" -le 5 ]]; then
+  phase 5 "Create MAS Supervisor Agent"
 
   # Load Genie IDs from file (in case phases ran separately)
   if [[ -f "$GENIE_ID_FILE" ]]; then
@@ -439,54 +398,19 @@ mas.recreate()
 fi
 
 ###############################################################################
-# Phase 8: Deploy the Databricks App
-###############################################################################
-if [[ "$FROM_PHASE" -le 8 ]]; then
-  phase 8 "Deploy Databricks App"
-
-  log "The Databricks App uses app.yaml for runtime configuration."
-  log "Verify these values in app.yaml match the target workspace:"
-  log "  DATABRICKS_HOST          — workspace URL"
-  log "  DATABRICKS_HTTP_PATH     — SQL warehouse HTTP path"
-  log "  DATABRICKS_CATALOG       — $CATALOG"
-  log "  DATABRICKS_SCHEMA        — $SCHEMA"
-  log "  DATABRICKS_CHAT_ENDPOINT — MAS serving endpoint URL"
-  log "  DATABRICKS_CHAT_MODEL    — MAS endpoint name"
-  log ""
-  log "Template with placeholders: app.yaml.template"
-  log ""
-
-  if [[ "$DRY_RUN" == false ]]; then
-    log "Redeploying bundle (includes app)..."
-    dbcli bundle deploy \
-      --var "catalog=${CATALOG}" \
-      --var "schema=${SCHEMA}" || {
-      warn "Bundle redeploy failed — check databricks bundle logs."
-    }
-  fi
-
-  log "App deployment triggered."
-fi
-
-###############################################################################
 # Done
 ###############################################################################
 echo ""
 log "${BOLD}Deployment complete.${NC}"
 echo ""
 log "Summary of deployed resources:"
-log "  Bundle:     sobeys-scctower (app + pipeline)"
 log "  Catalog:    $CATALOG"
 log "  Schema:     $SCHEMA"
-log "  Pipeline:   scctower_sdp"
 log "  UC Func:    ${FULL_SCHEMA}.predict_demand"
 log "  MAS:        $MAS_NAME"
-log "  App:        scctower-dev"
 echo ""
 log "Remaining manual steps (if not already done):"
 log "  1. Train the demand forecast model on a cluster:"
 log "       Upload scripts/demand_forecast_train.py as a notebook and run"
 log "  2. Deploy the model serving endpoint:"
 log "       Upload scripts/demand_forecast_deploy.py as a notebook and run"
-log "  3. Verify app.yaml has correct endpoint values, then redeploy:"
-log "       databricks bundle deploy${PROFILE:+ --profile $PROFILE}"
