@@ -1,6 +1,14 @@
 bundle:
   name: sobeys-scctower
 
+variables:
+  catalog:
+    description: Unity Catalog name for all tables and functions
+    default: retail_consumer_goods
+  schema:
+    description: Schema name within the catalog
+    default: supply_chain_control_tower
+
 include:
   - resources/*.yml
 

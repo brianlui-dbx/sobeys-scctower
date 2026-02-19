@@ -20,3 +20,4 @@ venv/
 
 # Databricks Asset Bundles
 .databricks/
+.databricks-resources.json
