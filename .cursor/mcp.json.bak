@@ -6,7 +6,7 @@
         "/Users/brian.lui/.ai-dev-kit/repo/databricks-mcp-server/run_server.py"
       ],
       "env": {
-        "DATABRICKS_CONFIG_PROFILE": "sobeysagentdbw"
+        "DATABRICKS_CONFIG_PROFILE": "sobeysagentsdbw"
       }
     }
   }
