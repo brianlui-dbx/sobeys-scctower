@@ -467,69 +467,114 @@ def _process_sse_event(event_json: dict, task: dict, phase: str, text_buffer: st
     return phase, text_buffer, answer_buffer
 
 
+def _stream_mas_request(
+    url: str, payload: dict, headers: dict, task: dict,
+    phase: str, text_buffer: str, answer_buffer: str, _log: Any,
+) -> tuple[list[dict], str, str, str]:
+    """Stream a single MAS request and update task state in real-time.
+
+    Returns (output_items, phase, text_buffer, answer_buffer).
+    output_items is the list of all raw output items for conversation continuation.
+    """
+    import requests as _req
+
+    _log(f"POST {url[:60]}...")
+    resp = _req.post(url, json=payload, headers=headers, timeout=300, stream=True)
+    _log(f"HTTP {resp.status_code}")
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"MAS returned {resp.status_code}: {resp.text[:200]}")
+
+    output_items: list[dict] = []
+
+    for line in resp.iter_lines(decode_unicode=True):
+        if not line or not line.startswith("data: "):
+            continue
+        raw = line[6:]
+        if raw == "[DONE]":
+            _log(f"[DONE] steps={len(task['steps'])}")
+            break
+
+        try:
+            event = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+
+        event_type = event.get("type", "")
+
+        # Collect output items for conversation continuation (needed for MCP approvals)
+        if event_type == "response.output_item.done":
+            item = event.get("item", {})
+            output_items.append(item)
+            _log(f"item({item.get('type', '?')} {item.get('name', '')}) steps={len(task['steps'])}")
+
+        phase, text_buffer, answer_buffer = _process_sse_event(
+            event, task, phase, text_buffer, answer_buffer,
+        )
+
+    return output_items, phase, text_buffer, answer_buffer
+
+
 def _run_mas_task(
     task_id: str, messages: list[dict], host: str, model: str, auth_headers: dict,
 ) -> None:
-    """Background thread: stream from MAS using requests for real-time updates."""
-    import requests
+    """Background thread: stream from MAS with auto-approval of MCP tool calls."""
+    import sys
+    import uuid as _uuid
 
     task = _chat_tasks[task_id]
     task["status"] = "running"
 
     url = f"{host}/serving-endpoints/{model}/invocations"
-    payload = {"input": messages, "stream": True}
+    headers = {**auth_headers, "Content-Type": "application/json"}
+    t0 = _time.time()
+
+    def _log(msg: str) -> None:
+        print(f"[MAS +{_time.time()-t0:.1f}s] {msg}", flush=True, file=sys.stderr)
 
     phase = "init"
     text_buffer = ""
     answer_buffer = ""
-
-    import sys
-    t0 = _time.time()
-
-    def _log(msg: str) -> None:
-        print(f"[TIMING +{_time.time()-t0:.1f}s] {msg}", flush=True, file=sys.stderr)
+    conversation: list[dict] = list(messages)  # running conversation for continuations
 
     try:
-        _log(f"Starting POST to {url[:60]}...")
-        resp = requests.post(
-            url, json=payload,
-            headers={**auth_headers, "Content-Type": "application/json"},
-            timeout=300,
-            stream=True,
-        )
-        _log(f"HTTP {resp.status_code}")
-        if resp.status_code != 200:
-            task["status"] = "error"
-            task["response"] = f"MAS returned {resp.status_code}: {resp.text[:200]}"
-            return
+        max_rounds = 10  # safety limit for approval loops
+        for round_num in range(max_rounds):
+            payload = {"input": conversation, "stream": True}
 
-        line_count = 0
-        for line in resp.iter_lines(decode_unicode=True):
-            if not line or not line.startswith("data: "):
-                continue
-            raw = line[6:]
-            if raw == "[DONE]":
-                _log(f"[DONE] lines={line_count} steps={len(task['steps'])}")
-                break
-
-            try:
-                event = json.loads(raw)
-            except json.JSONDecodeError:
-                continue
-
-            line_count += 1
-            event_type = event.get("type", "")
-            if event_type == "response.output_item.done":
-                item = event.get("item", {})
-                it = item.get("type", "")
-                name = item.get("name", "")
-                _log(f"item_done({it} {name}) steps={len(task['steps'])}")
-
-            phase, text_buffer, answer_buffer = _process_sse_event(
-                event, task, phase, text_buffer, answer_buffer,
+            output_items, phase, text_buffer, answer_buffer = _stream_mas_request(
+                url, payload, headers, task, phase, text_buffer, answer_buffer, _log,
             )
 
-        # Handle no-tool-call case (direct answer without sub-agents)
+            # Check for MCP approval requests
+            approval_reqs = [i for i in output_items if i.get("type") == "mcp_approval_request"]
+            if not approval_reqs:
+                _log(f"Round {round_num+1}: no approvals needed")
+                break
+
+            # Auto-approve all MCP tool calls and continue
+            _log(f"Round {round_num+1}: auto-approving {len(approval_reqs)} MCP tool call(s)")
+            for ar in approval_reqs:
+                tool_name = ar.get("name", "unknown")
+                task["steps"].append({
+                    "type": "tool_call",
+                    "title": _prettify_agent_name(tool_name),
+                    "content": ar.get("arguments", ""),
+                })
+
+            # Build continuation: previous conversation + output items + approvals
+            conversation = list(conversation)
+            for item in output_items:
+                conversation.append(item)
+            for ar in approval_reqs:
+                conversation.append({
+                    "type": "mcp_approval_response",
+                    "id": str(_uuid.uuid4()),
+                    "approval_request_id": ar["id"],
+                    "approve": True,
+                })
+
+        # Handle no-tool-call case
         if text_buffer.strip() and phase == "init":
             task["response"] = text_buffer
 
@@ -537,7 +582,7 @@ def _run_mas_task(
         _log(f"COMPLETE {len(task.get('response', ''))} chars, {len(task['steps'])} steps")
 
     except Exception as e:
-        logger.error(f"Chat task {task_id} error: {e}")
+        _log(f"ERROR: {e}")
         task["status"] = "error"
         task["response"] = str(e)
 
