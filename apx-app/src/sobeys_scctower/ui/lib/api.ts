@@ -15,9 +15,16 @@ export interface ChatRequestIn {
   messages: ChatMessageIn[];
 }
 
+export interface ChatStepOut {
+  content?: string;
+  title?: string;
+  type: string;
+}
+
 export interface ChatTaskOut {
   response?: string;
   status: string;
+  steps?: ChatStepOut[];
   task_id: string;
 }
 

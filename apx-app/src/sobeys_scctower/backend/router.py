@@ -1,21 +1,17 @@
 from __future__ import annotations
 
-import asyncio
 import json
-import threading
-import uuid
 from pathlib import Path
 from typing import Any, Optional
 
 import yaml
 from databricks.sdk.service.iam import User as UserOut
 from fastapi import Query, Response
-from fastapi.responses import StreamingResponse
 
 from .core import Dependency, create_router, execute_sql, logger
 from .models import (
     ChatRequestIn,
-    ChatResponseOut,
+    ChatStepOut,
     ChatTaskOut,
     CustomerLocationOut,
     DcInventoryOut,
@@ -370,101 +366,215 @@ def list_customer_locations(ws: Dependency.Client, config: Dependency.Config):
     ) for r in rows]
 
 
-# ─── Chat Task Store (in-memory, keyed by task_id) ──────────────────────────
+# ─── Chat: Streaming SSE ─────────────────────────────────────────────────────
+
+import re as _re
+
+_AGENT_LABEL_RE = _re.compile(r"^\s*<name>.+</name>\s*$", _re.DOTALL)
+
+
+def _prettify_agent_name(raw: str) -> str:
+    """Turn 'agent-dc-inventory' into 'DC Inventory'."""
+    name = raw.removeprefix("agent-").removeprefix("mcp-")
+    return name.replace("-", " ").replace("_", " ").title()
+
+
+def _extract_message_text(item: dict) -> str:
+    """Extract text from a message output item."""
+    content_list = item.get("content", [])
+    if isinstance(content_list, list):
+        for c in content_list:
+            if c.get("type") == "output_text" and c.get("text", "").strip():
+                return c["text"]
+    return ""
+
+
+def _sse(event: str, data: Any) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
 
 import time as _time
+import threading as _threading
 
 _chat_tasks: dict[str, dict[str, Any]] = {}
 
 
 def _cleanup_old_tasks() -> None:
-    """Remove tasks older than 5 minutes."""
     now = _time.time()
     stale = [k for k, v in _chat_tasks.items() if now - v.get("created_at", 0) > 300]
     for k in stale:
         _chat_tasks.pop(k, None)
 
 
-def _run_mas_task(task_id: str, messages: list[dict[str, str]], host: str, model: str, auth_headers: dict[str, str]) -> None:
-    """Background thread: call MAS and store the result."""
-    import httpx
+def _process_sse_event(event_json: dict, task: dict, phase: str, text_buffer: str, answer_buffer: str) -> tuple[str, str, str]:
+    """Process a single SSE event and update task state in-place.
 
-    _chat_tasks[task_id] = {"status": "running", "response": ""}
+    Returns updated (phase, text_buffer, answer_buffer).
+    """
+    event_type = event_json.get("type", "")
+
+    if event_type == "response.output_text.delta":
+        delta = event_json.get("delta", "")
+        if phase == "streaming":
+            answer_buffer += delta
+            task["response"] = answer_buffer
+        else:
+            text_buffer += delta
+
+    elif event_type == "response.output_item.done":
+        item = event_json.get("item", {})
+        item_type = item.get("type", "")
+
+        if item_type == "function_call":
+            if text_buffer.strip():
+                task["steps"].append({
+                    "type": "thinking",
+                    "title": "Reasoning",
+                    "content": text_buffer.strip(),
+                })
+                text_buffer = ""
+
+            if phase == "streaming" and answer_buffer.strip():
+                task["steps"].append({
+                    "type": "thinking",
+                    "title": "Reasoning",
+                    "content": answer_buffer.strip(),
+                })
+                answer_buffer = ""
+                task["response"] = ""
+
+            agent_name = item.get("name", "unknown")
+            try:
+                args = json.loads(item.get("arguments", "{}"))
+                query = args.get("genie_query", args.get("query", json.dumps(args)))
+            except (json.JSONDecodeError, TypeError):
+                query = item.get("arguments", "")
+
+            task["steps"].append({
+                "type": "tool_call",
+                "title": _prettify_agent_name(agent_name),
+                "content": query,
+            })
+            phase = "waiting"
+
+        elif item_type == "message":
+            text = _extract_message_text(item)
+            if text and _AGENT_LABEL_RE.match(text):
+                if "SCC_Tower" in text or "Supervisor" in text:
+                    phase = "streaming"
+                    answer_buffer = ""
+
+    return phase, text_buffer, answer_buffer
+
+
+def _run_mas_task(
+    task_id: str, messages: list[dict], host: str, model: str, auth_headers: dict,
+) -> None:
+    """Background thread: stream from MAS using requests for real-time updates."""
+    import requests
+
+    task = _chat_tasks[task_id]
+    task["status"] = "running"
+
+    url = f"{host}/serving-endpoints/{model}/invocations"
+    payload = {"input": messages, "stream": True}
+
+    phase = "init"
+    text_buffer = ""
+    answer_buffer = ""
+
+    import sys
+    t0 = _time.time()
+
+    def _log(msg: str) -> None:
+        print(f"[TIMING +{_time.time()-t0:.1f}s] {msg}", flush=True, file=sys.stderr)
+
     try:
-        url = f"{host}/serving-endpoints/{model}/invocations"
-        payload = {"input": messages}
-        resp = httpx.post(
+        _log(f"Starting POST to {url[:60]}...")
+        resp = requests.post(
             url, json=payload,
             headers={**auth_headers, "Content-Type": "application/json"},
-            timeout=httpx.Timeout(connect=10, read=300, write=10, pool=10),
+            timeout=300,
+            stream=True,
         )
+        _log(f"HTTP {resp.status_code}")
         if resp.status_code != 200:
-            logger.error(f"MAS HTTP {resp.status_code}: {resp.text[:200]}")
-            _chat_tasks[task_id] = {"status": "error", "response": f"MAS returned {resp.status_code}"}
+            task["status"] = "error"
+            task["response"] = f"MAS returned {resp.status_code}: {resp.text[:200]}"
             return
 
-        data = resp.json()
-        text = ""
-        # MAS returns multiple output items (thinking, tool calls, intermediate, final).
-        # Walk backwards to find the last message with text content — that's the real answer.
-        output = data.get("output", [])
-        for item in reversed(output):
-            if item.get("type") == "message" and item.get("role") == "assistant":
-                content_list = item.get("content", [])
-                if isinstance(content_list, list):
-                    for c in content_list:
-                        if c.get("type") == "output_text" and c.get("text", "").strip():
-                            text = c["text"]
-                            break
-                if text:
-                    break
+        line_count = 0
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data: "):
+                continue
+            raw = line[6:]
+            if raw == "[DONE]":
+                _log(f"[DONE] lines={line_count} steps={len(task['steps'])}")
+                break
 
-        _chat_tasks[task_id] = {"status": "done", "response": text}
-        logger.info(f"Chat task {task_id} completed ({len(text)} chars)")
+            try:
+                event = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            line_count += 1
+            event_type = event.get("type", "")
+            if event_type == "response.output_item.done":
+                item = event.get("item", {})
+                it = item.get("type", "")
+                name = item.get("name", "")
+                _log(f"item_done({it} {name}) steps={len(task['steps'])}")
+
+            phase, text_buffer, answer_buffer = _process_sse_event(
+                event, task, phase, text_buffer, answer_buffer,
+            )
+
+        # Handle no-tool-call case (direct answer without sub-agents)
+        if text_buffer.strip() and phase == "init":
+            task["response"] = text_buffer
+
+        task["status"] = "done"
+        _log(f"COMPLETE {len(task.get('response', ''))} chars, {len(task['steps'])} steps")
 
     except Exception as e:
         logger.error(f"Chat task {task_id} error: {e}")
-        _chat_tasks[task_id] = {"status": "error", "response": str(e)}
+        task["status"] = "error"
+        task["response"] = str(e)
 
 
-# ─── Chat: Start Task ───────────────────────────────────────────────────────
-
-@router.post(
-    "/chat/start",
-    response_model=ChatTaskOut,
-    operation_id="startChat",
-)
+@router.post("/chat/start", response_model=ChatTaskOut, operation_id="startChat")
 def start_chat(
     body: ChatRequestIn,
     ws: Dependency.Client,
     config: Dependency.Config,
 ):
+    import uuid
     task_id = str(uuid.uuid4())
     auth_headers = ws.config.authenticate()
     messages = [{"role": m.role, "content": m.content} for m in body.messages]
 
-    thread = threading.Thread(
+    _cleanup_old_tasks()
+    _chat_tasks[task_id] = {
+        "status": "pending", "response": "", "steps": [],
+        "created_at": _time.time(),
+    }
+
+    thread = _threading.Thread(
         target=_run_mas_task,
         args=(task_id, messages, str(ws.config.host), config.chat_model, auth_headers),
         daemon=True,
     )
     thread.start()
 
-    _cleanup_old_tasks()
-    _chat_tasks[task_id] = {"status": "pending", "response": "", "created_at": _time.time()}
     return ChatTaskOut(task_id=task_id, status="pending")
 
 
-# ─── Chat: Poll Task ────────────────────────────────────────────────────────
-
-@router.get(
-    "/chat/poll/{task_id}",
-    response_model=ChatTaskOut,
-    operation_id="pollChat",
-)
-def poll_chat(task_id: str):
+@router.get("/chat/poll/{task_id}", response_model=ChatTaskOut, operation_id="pollChat")
+async def poll_chat(task_id: str):
+    """Async handler — runs directly in the event loop, never blocked by thread pool."""
     task = _chat_tasks.get(task_id)
     if not task:
         return ChatTaskOut(task_id=task_id, status="error", response="Task not found")
 
-    return ChatTaskOut(task_id=task_id, status=task["status"], response=task["response"])
+    steps = [ChatStepOut(**s) for s in task.get("steps", [])]
+    return ChatTaskOut(task_id=task_id, status=task["status"], response=task.get("response", ""), steps=steps)

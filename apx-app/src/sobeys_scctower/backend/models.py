@@ -225,7 +225,14 @@ class ChatResponseOut(BaseModel):
     model: str
 
 
+class ChatStepOut(BaseModel):
+    type: str       # "thinking", "tool_call", "tool_result", "answer"
+    title: str = ""
+    content: str = ""
+
+
 class ChatTaskOut(BaseModel):
     task_id: str
     status: str  # "pending", "running", "done", "error"
     response: str = ""
+    steps: list[ChatStepOut] = []

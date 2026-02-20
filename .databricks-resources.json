@@ -8,6 +8,13 @@
       "created_at": "2026-02-19T19:55:52.099929+00:00",
       "updated_at": "2026-02-19T19:55:52.099929+00:00",
       "url": "https://adb-7405613286317055.15.azuredatabricks.net/sql/dashboardsv3/01f10dccfe351d79a3e9c299679cd195"
+    },
+    {
+      "type": "job",
+      "name": "SCC Tower LangGraph Agent - Log and Deploy",
+      "id": "967799105217739",
+      "created_at": "2026-02-20T17:30:43.288879+00:00",
+      "updated_at": "2026-02-20T17:30:43.288879+00:00"
     }
   ]
 }

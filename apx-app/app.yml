@@ -10,6 +10,6 @@ env:
   - name: SOBEYS_SCCTOWER_CHAT_ENDPOINT
     value: "https://adb-7405613286317055.15.azuredatabricks.net/serving-endpoints"
   - name: SOBEYS_SCCTOWER_CHAT_MODEL
-    value: "mas-5fba20e2-endpoint"
+    value: "mas-9c52dfca-endpoint"
   - name: SOBEYS_SCCTOWER_GENERAL_MODEL
     value: "databricks-gpt-5-1"
