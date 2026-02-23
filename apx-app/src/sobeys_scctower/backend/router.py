@@ -384,8 +384,13 @@ def _extract_message_text(item: dict) -> str:
     content_list = item.get("content", [])
     if isinstance(content_list, list):
         for c in content_list:
-            if c.get("type") == "output_text" and c.get("text", "").strip():
+            ctype = c.get("type", "")
+            text = c.get("text", "").strip()
+            if text and ctype in ("output_text", "text"):
                 return c["text"]
+    # Fallback: check for top-level text field
+    if item.get("text", "").strip():
+        return item["text"]
     return ""
 
 
@@ -447,11 +452,14 @@ def _process_sse_event(event_json: dict, task: dict, phase: str, text_buffer: st
             try:
                 args = json.loads(item.get("arguments", "{}"))
                 query = args.get("genie_query", args.get("query", json.dumps(args)))
+                is_genie = "genie_query" in args
             except (json.JSONDecodeError, TypeError):
                 query = item.get("arguments", "")
+                is_genie = False
 
+            step_type = "genie_call" if (agent_name.startswith("agent-") or is_genie) else "tool_call"
             task["steps"].append({
-                "type": "tool_call",
+                "type": step_type,
                 "title": _prettify_agent_name(agent_name),
                 "content": query,
             })
@@ -492,7 +500,17 @@ def _stream_mas_request(
             continue
         raw = line[6:]
         if raw == "[DONE]":
-            _log(f"[DONE] steps={len(task['steps'])}")
+            _log(f"[DONE] steps={len(task['steps'])} phase={phase} text_buf={len(text_buffer)} ans_buf={len(answer_buffer)} resp={len(task.get('response', ''))} items={len(output_items)}")
+            # Log last message item content structure for debugging
+            for oi in reversed(output_items):
+                if oi.get("type") == "message":
+                    content = oi.get("content", [])
+                    types = [c.get("type", "?") for c in content] if isinstance(content, list) else ["non-list"]
+                    _log(f"last-msg content_types={types} content_len={len(content) if isinstance(content, list) else '?'}")
+                    if isinstance(content, list) and content:
+                        first = content[0]
+                        _log(f"last-msg first_part type={first.get('type','?')} text_len={len(first.get('text',''))}")
+                    break
             break
 
         try:
@@ -507,10 +525,16 @@ def _stream_mas_request(
             item = event.get("item", {})
             output_items.append(item)
             _log(f"item({item.get('type', '?')} {item.get('name', '')}) steps={len(task['steps'])}")
+        elif event_type == "mcp_approval_request":
+            # MCP approval requests arrive as top-level SSE events, not inside output_item.done
+            output_items.append(event)
+            _log(f"mcp_approval({event.get('name', '?')}) steps={len(task['steps'])}")
 
         phase, text_buffer, answer_buffer = _process_sse_event(
             event, task, phase, text_buffer, answer_buffer,
         )
+
+    _log(f"end-of-stream phase={phase} text_buf={len(text_buffer)} ans_buf={len(answer_buffer)} resp={len(task.get('response', ''))}")
 
     return output_items, phase, text_buffer, answer_buffer
 
@@ -574,9 +598,22 @@ def _run_mas_task(
                     "approve": True,
                 })
 
-        # Handle no-tool-call case
-        if text_buffer.strip() and phase == "init":
-            task["response"] = text_buffer
+        # Capture any remaining content that wasn't picked up by the streaming phase
+        if not task["response"].strip():
+            if answer_buffer.strip():
+                task["response"] = answer_buffer
+            elif text_buffer.strip():
+                task["response"] = text_buffer
+            else:
+                # Last resort: the final answer may be embedded in the last message
+                # output item rather than streamed as text deltas
+                for item in reversed(output_items):
+                    if item.get("type") == "message":
+                        text = _extract_message_text(item)
+                        if text and not _AGENT_LABEL_RE.match(text):
+                            task["response"] = text
+                            _log(f"recovered response from message item ({len(text)} chars)")
+                            break
 
         task["status"] = "done"
         _log(f"COMPLETE {len(task.get('response', ''))} chars, {len(task['steps'])} steps")
