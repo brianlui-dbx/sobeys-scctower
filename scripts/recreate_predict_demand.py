@@ -36,22 +36,53 @@ USAGE
 """
 
 import argparse
+import json
 import subprocess
 import sys
 import textwrap
 
 
-def run_sql(sql: str, profile: str | None = None) -> None:
-    """Execute a SQL statement via Databricks CLI."""
-    cmd = ["databricks", "sql", "execute", "--statement", sql]
+def get_warehouse_id(profile: str | None) -> str:
+    """Return the first available SQL warehouse ID."""
+    cmd = ["databricks", "api", "get", "/api/2.0/sql/warehouses"]
     if profile:
         cmd.extend(["--profile", profile])
-    print(f"  Executing SQL...")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    warehouses = json.loads(result.stdout).get("warehouses", [])
+    for w in warehouses:
+        if w.get("state") == "RUNNING":
+            return w["id"]
+    if warehouses:
+        return warehouses[0]["id"]
+    raise RuntimeError("No SQL warehouse found in workspace.")
+
+
+def run_sql(sql: str, profile: str | None = None, warehouse_id: str | None = None) -> None:
+    """Execute a SQL statement via the Databricks SQL Statements API."""
+    if warehouse_id is None:
+        warehouse_id = get_warehouse_id(profile)
+    payload = json.dumps({
+        "statement": sql,
+        "warehouse_id": warehouse_id,
+        "wait_timeout": "50s",
+        "disposition": "INLINE",
+        "format": "JSON_ARRAY",
+    })
+    cmd = ["databricks", "api", "post", "/api/2.0/sql/statements", "--json", payload]
+    if profile:
+        cmd.extend(["--profile", profile])
+    print("  Executing SQL...")
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"  ERROR: {result.stderr.strip()}")
         sys.exit(1)
-    print(f"  OK")
+    response = json.loads(result.stdout)
+    state = response.get("status", {}).get("state", "UNKNOWN")
+    if state != "SUCCEEDED":
+        error = response.get("status", {}).get("error", {})
+        print(f"  ERROR ({state}): {error.get('message', result.stdout[:200])}")
+        sys.exit(1)
+    print("  OK")
 
 
 def deploy_model(catalog: str, schema: str, profile: str | None = None) -> None:
@@ -71,7 +102,7 @@ def deploy_model(catalog: str, schema: str, profile: str | None = None) -> None:
     print("  The deploy script will create/update the model serving endpoint.")
 
 
-def create_uc_function(catalog: str, schema: str, profile: str | None = None) -> None:
+def create_uc_function(catalog: str, schema: str, profile: str | None = None, warehouse_id: str | None = None) -> None:
     """Create the predict_demand UC function with 2x safety factor."""
     endpoint_name = "demand-forecast-endpoint"
     full_name = f"{catalog}.{schema}.predict_demand"
@@ -115,16 +146,16 @@ def create_uc_function(catalog: str, schema: str, profile: str | None = None) ->
                 ) AS predicted_demand
     """)
 
-    run_sql(sql, profile)
+    run_sql(sql, profile, warehouse_id)
     print(f"\n  Function {full_name} created successfully.")
 
 
-def verify_function(catalog: str, schema: str, profile: str | None = None) -> None:
+def verify_function(catalog: str, schema: str, profile: str | None = None, warehouse_id: str | None = None) -> None:
     """Verify the function exists by describing it."""
     full_name = f"{catalog}.{schema}.predict_demand"
     print(f"\n--- Verifying function ---")
     sql = f"DESCRIBE FUNCTION {full_name}"
-    run_sql(sql, profile)
+    run_sql(sql, profile, warehouse_id)
     print(f"  Function {full_name} verified.")
 
 
@@ -166,12 +197,14 @@ def main():
         print(f"  Profile: {args.profile}")
     print("=" * 60)
 
+    warehouse_id = get_warehouse_id(args.profile) if not args.model_only else None
+
     if not args.function_only:
         deploy_model(args.catalog, args.schema, args.profile)
 
     if not args.model_only:
-        create_uc_function(args.catalog, args.schema, args.profile)
-        verify_function(args.catalog, args.schema, args.profile)
+        create_uc_function(args.catalog, args.schema, args.profile, warehouse_id)
+        verify_function(args.catalog, args.schema, args.profile, warehouse_id)
 
     print("\n" + "=" * 60)
     print("  Done!")

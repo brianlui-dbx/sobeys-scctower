@@ -26,6 +26,7 @@ SCHEMA="supply_chain_control_tower"
 VOLUME_NAME="raw_data"
 
 DEMAND_ENDPOINT="demand-forecast-endpoint"
+WAREHOUSE_ID="b9771bcf4a3a5399"   # SQL warehouse for DDL execution; update for new workspaces
 MAS_NAME="SCC_Tower_Supply_Chain_Supervisor"
 
 # Genie spaces — parallel arrays (bash 3 compatible)
@@ -70,7 +71,20 @@ dbcli() {
 
 run_sql() {
   local stmt="$1"
-  dbcli sql execute --statement "$stmt" 2>&1
+  local payload
+  payload="$("$PYTHON" -c "
+import json, sys
+print(json.dumps({
+    'statement': sys.argv[1],
+    'warehouse_id': '$WAREHOUSE_ID',
+    'catalog': '$CATALOG',
+    'schema': '$SCHEMA',
+    'wait_timeout': '50s',
+    'disposition': 'INLINE',
+    'format': 'JSON_ARRAY',
+}))
+" "$stmt")"
+  dbcli api post /api/2.0/sql/statements --json "$payload" 2>&1
 }
 
 run_sql_file() {
@@ -83,6 +97,8 @@ run_sql_file() {
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ -z "${line// /}" ]] && continue
     [[ "$line" =~ ^--.*$ ]] && continue
+    # USE CATALOG / USE SCHEMA are handled via API context params — skip them
+    [[ "$line" =~ ^USE[[:space:]] ]] && continue
     current+="$line "
     if [[ "$line" == *";" ]]; then
       current="${current%;}"
@@ -222,6 +238,17 @@ if [[ "$FROM_PHASE" -le 3 ]]; then
       warn "Run: python scripts/recreate_predict_demand.py${PROFILE:+ --profile $PROFILE}"
     }
   fi
+
+  log "  Part C: Creating supply chain action UC functions..."
+  if [[ "$DRY_RUN" == false ]]; then
+    "$PYTHON" scripts/recreate_supply_chain_functions.py \
+      --catalog "$CATALOG" \
+      --schema "$SCHEMA" \
+      ${PROFILE:+--profile "$PROFILE"} || {
+      warn "Supply chain function creation failed."
+      warn "Run: python scripts/recreate_supply_chain_functions.py${PROFILE:+ --profile $PROFILE}"
+    }
+  fi
 fi
 
 ###############################################################################
@@ -235,8 +262,8 @@ if [[ "$FROM_PHASE" -le 4 ]]; then
   WS_HOST=""
   WS_TOKEN=""
   if [[ "$DRY_RUN" == false ]]; then
-    WS_HOST="$(dbcli auth env 2>/dev/null | grep DATABRICKS_HOST | head -1 | cut -d= -f2- || true)"
-    WS_TOKEN="$(dbcli auth token 2>/dev/null | tr -d '[:space:]' || true)"
+    WS_HOST="$(dbcli auth env 2>/dev/null | "$PYTHON" -c "import sys,json; print(json.load(sys.stdin).get('env',{}).get('DATABRICKS_HOST',''))" 2>/dev/null || true)"
+    WS_TOKEN="$(dbcli auth token 2>/dev/null | "$PYTHON" -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || true)"
 
     if [[ -z "$WS_HOST" || -z "$WS_TOKEN" ]]; then
       warn "Could not resolve workspace host/token from CLI profile."
@@ -363,8 +390,8 @@ if [[ "$FROM_PHASE" -le 5 ]]; then
   log "    supplier_orders = ${SUPP_OR:-<missing>}"
 
   if [[ "$DRY_RUN" == false ]]; then
-    WS_HOST="${WS_HOST:-$(dbcli auth env 2>/dev/null | grep DATABRICKS_HOST | head -1 | cut -d= -f2- || true)}"
-    WS_TOKEN="${WS_TOKEN:-$(dbcli auth token 2>/dev/null | tr -d '[:space:]' || true)}"
+    WS_HOST="${WS_HOST:-$(dbcli auth env 2>/dev/null | "$PYTHON" -c "import sys,json; print(json.load(sys.stdin).get('env',{}).get('DATABRICKS_HOST',''))" 2>/dev/null || true)}"
+    WS_TOKEN="${WS_TOKEN:-$(dbcli auth token 2>/dev/null | "$PYTHON" -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || true)}"
 
     if [[ -n "$WS_HOST" && -n "$WS_TOKEN" ]]; then
       DATABRICKS_HOST="$WS_HOST" DATABRICKS_TOKEN="$WS_TOKEN" \
@@ -407,6 +434,8 @@ log "Summary of deployed resources:"
 log "  Catalog:    $CATALOG"
 log "  Schema:     $SCHEMA"
 log "  UC Func:    ${FULL_SCHEMA}.predict_demand"
+log "  UC Funcs:   ${FULL_SCHEMA}.{place_supplier_order,expedite_supplier_order}"
+log "              ${FULL_SCHEMA}.{get,send}_order_{from,to}_{AWR,CAO,SAP}"
 log "  MAS:        $MAS_NAME"
 echo ""
 log "Remaining manual steps (if not already done):"

@@ -386,25 +386,35 @@ def validate_prerequisites():
 # =============================================================================
 
 def build_agent_list():
-    """Convert AGENT_CONFIGS into the format expected by the Agent Bricks API."""
+    """Convert AGENT_CONFIGS into the format expected by the Agent Bricks REST API.
+
+    The API uses agent_type as a discriminator with nested payload objects:
+      - genie-space           → genie_space: {id: "..."}
+      - unity-catalog-function→ unity_catalog_function: {uc_path: {catalog, schema, name}}
+      - external-mcp-server   → external_mcp_server: {connection_name: "..."}
+    """
     agents = []
-    default_uc_fn = f"{UC_FUNCTION_CATALOG}.{UC_FUNCTION_SCHEMA}.{UC_FUNCTION_NAME}"
+    default_fn_name = UC_FUNCTION_NAME
 
     for cfg in AGENT_CONFIGS:
         agent = {"name": cfg["name"], "description": cfg["description"]}
 
         if cfg["type"] == "genie_space":
-            agent["genie_space_id"] = GENIE_SPACE_IDS[cfg["name"]]
+            agent["agent_type"] = "genie-space"
+            agent["genie_space"] = {"id": GENIE_SPACE_IDS[cfg["name"]]}
         elif cfg["type"] == "uc_function":
-            # Use per-agent function name if provided, else fall back to default
-            fn_name = (
-                f"{UC_FUNCTION_CATALOG}.{UC_FUNCTION_SCHEMA}.{cfg['uc_fn']}"
-                if "uc_fn" in cfg
-                else default_uc_fn
-            )
-            agent["uc_function_name"] = fn_name
+            fn_name = cfg.get("uc_fn", default_fn_name)
+            agent["agent_type"] = "unity-catalog-function"
+            agent["unity_catalog_function"] = {
+                "uc_path": {
+                    "catalog": UC_FUNCTION_CATALOG,
+                    "schema":  UC_FUNCTION_SCHEMA,
+                    "name":    fn_name,
+                }
+            }
         elif cfg["type"] == "mcp_connection":
-            agent["connection_name"] = MCP_CONNECTION_NAME
+            agent["agent_type"] = "external-mcp-server"
+            agent["external_mcp_server"] = {"connection_name": MCP_CONNECTION_NAME}
         else:
             raise ValueError(f"Unknown agent type: {cfg['type']}")
 
@@ -416,20 +426,32 @@ def build_agent_list():
 # STEP 3: CREATE THE SUPERVISOR AGENT VIA THE AGENT BRICKS SDK
 # =============================================================================
 
+def _find_existing_tile_id(name: str) -> str | None:
+    """Search for an existing Supervisor Agent by name; return tile_id or None.
+
+    Uses GET /api/2.0/tiles which lists all Agent Bricks tiles (KA, Genie, MAS).
+    """
+    url = f"{TARGET_WORKSPACE_URL}/api/2.0/tiles"
+    resp = requests.get(url, headers=_headers())
+    if resp.status_code != 200:
+        return None
+    items = resp.json().get("tiles", [])
+    sanitized = name.replace(" ", "_")
+    for item in items:
+        if item.get("name") in (name, sanitized) and item.get("tile_type") == "MAS":
+            return item.get("tile_id")
+    return None
+
+
 def create_supervisor_agent():
     """
-    Create the Supervisor Agent using the Databricks Agent Bricks (AI Tiles) REST API.
+    Create (or update if already exists) the Supervisor Agent via the Agent Bricks REST API.
 
-    If you prefer using the databricks-sdk Python library instead of direct REST calls,
-    replace the requests calls below with:
-        from databricks.sdk import WorkspaceClient
-        w = WorkspaceClient(host=TARGET_WORKSPACE_URL, token=_get_token())
-        result = w.api_client.do("POST", "/api/2.0/agent-evaluation/tile-resources",
-                                 body=payload)
+    POST /api/2.0/multi-agent-supervisors  — create
+    PUT  /api/2.0/multi-agent-supervisors/{tile_id} — update (if name already exists)
     """
     agents = build_agent_list()
     payload = {
-        "type": "SUPERVISOR",
         "name": MAS_NAME,
         "description": MAS_DESCRIPTION,
         "instructions": MAS_INSTRUCTIONS,
@@ -438,50 +460,88 @@ def create_supervisor_agent():
     if MAS_EXAMPLES:
         payload["examples"] = MAS_EXAMPLES
 
-    url = f"{TARGET_WORKSPACE_URL}/api/2.0/agent-evaluation/tile-resources"
+    base_url = f"{TARGET_WORKSPACE_URL}/api/2.0/multi-agent-supervisors"
 
     print(f"Creating Supervisor Agent '{MAS_NAME}'...")
     print(f"  Agents ({len(agents)}):")
     for a in agents:
-        agent_ref = next(
-            (f"{k}={v}" for k, v in a.items()
-             if k in ("genie_space_id", "uc_function_name", "connection_name", "endpoint_name", "ka_tile_id")),
-            "(unknown)"
-        )
-        print(f"    - {a['name']:20s}  {agent_ref}")
+        atype = a.get("agent_type", "?")
+        if atype == "genie-space":
+            ref = f"genie_space_id={a.get('genie_space', {}).get('id', '?')}"
+        elif atype == "unity-catalog-function":
+            uc = a.get("unity_catalog_function", {}).get("uc_path", {})
+            ref = f"uc_function={uc.get('catalog','')}.{uc.get('schema','')}.{uc.get('name','')}"
+        elif atype == "external-mcp-server":
+            ref = f"connection_name={a.get('external_mcp_server', {}).get('connection_name', '?')}"
+        else:
+            ref = "(unknown)"
+        print(f"    - {a['name']:26s}  [{atype}]  {ref}")
 
-    response = requests.post(url, headers=_headers(), json=payload)
+    response = requests.post(base_url, headers=_headers(), json=payload)
+
+    if response.status_code == 409:
+        # Already exists — find the tile_id and update instead
+        print(f"\n  409 Conflict: '{MAS_NAME}' already exists. Looking up existing tile_id...")
+        existing_tile_id = _find_existing_tile_id(MAS_NAME)
+        if existing_tile_id:
+            print(f"  Found tile_id: {existing_tile_id}. Updating via PATCH...")
+            patch_url = f"{base_url}/{existing_tile_id}"
+            response = requests.patch(patch_url, headers=_headers(), json=payload)
+        else:
+            print(f"  Could not find existing tile_id. Cannot update.")
+            response.raise_for_status()
 
     if response.status_code not in (200, 201):
         print(f"\nERROR {response.status_code}: {response.text}")
         response.raise_for_status()
 
-    result = response.json()
-    return result
+    raw = response.json()
+
+    # Normalise the response: both POST and PATCH may wrap the result
+    # under {"multi_agent_supervisor": {"tile": {...}}}.
+    if "multi_agent_supervisor" in raw:
+        tile = raw["multi_agent_supervisor"].get("tile", {})
+        normalized = {
+            "tile_id": tile.get("tile_id"),
+            "endpoint_status": "PROVISIONING",  # check endpoint separately
+            "endpoint_name": tile.get("serving_endpoint_name", ""),
+        }
+    else:
+        normalized = raw
+
+    return normalized
 
 # =============================================================================
 # STEP 4: WAIT FOR ONLINE STATUS
 # =============================================================================
 
 def wait_for_online(tile_id, timeout_seconds=300, poll_interval=20):
-    """Poll the tile until it reaches ONLINE status or times out."""
-    url = f"{TARGET_WORKSPACE_URL}/api/2.0/agent-evaluation/tile-resources/{tile_id}"
+    """Poll the serving endpoint until it reaches READY status or times out."""
+    if not tile_id:
+        print("  No tile_id available — skipping endpoint wait.")
+        return None
+    endpoint_name = f"mas-{tile_id[:8]}-endpoint"
+    url = f"{TARGET_WORKSPACE_URL}/api/2.0/serving-endpoints/{endpoint_name}"
     deadline = time.time() + timeout_seconds
 
-    print(f"\nWaiting for endpoint to come ONLINE (timeout: {timeout_seconds}s)...")
+    print(f"\nWaiting for endpoint '{endpoint_name}' to come READY (timeout: {timeout_seconds}s)...")
     while time.time() < deadline:
         resp = requests.get(url, headers=_headers())
+        if resp.status_code == 404:
+            print("  Endpoint not yet created, waiting...")
+            time.sleep(poll_interval)
+            continue
         resp.raise_for_status()
-        status = resp.json().get("endpoint_status", "UNKNOWN")
-        print(f"  Status: {status}")
-        if status == "ONLINE":
+        state = resp.json().get("state", {}).get("ready", "NOT_READY")
+        print(f"  Status: {state}")
+        if state == "READY":
             return True
-        if status == "FAILED":
+        if state == "FAILED":
             print("  Endpoint reached FAILED state.")
             return False
         time.sleep(poll_interval)
 
-    print("  Timed out waiting for ONLINE status. Check manually.")
+    print("  Timed out waiting for READY status. Check manually.")
     return False
 
 # =============================================================================
@@ -499,19 +559,23 @@ def recreate():
 
     result = create_supervisor_agent()
 
-    tile_id = result.get("tile_id")
-    status  = result.get("endpoint_status", "PROVISIONING")
-    print(f"\nCreated successfully!")
-    print(f"  tile_id:        {tile_id}")
+    tile_id      = result.get("tile_id")
+    status       = result.get("endpoint_status", "PROVISIONING")
+    endpoint_name = result.get("endpoint_name") or (f"mas-{tile_id[:8]}-endpoint" if tile_id else "")
+    print(f"\nCreated/Updated successfully!")
+    print(f"  tile_id:         {tile_id}")
+    print(f"  endpoint:        {endpoint_name}")
     print(f"  endpoint_status: {status}")
 
     if status != "ONLINE":
         online = wait_for_online(tile_id)
-        if online:
+        if online is None:
+            print("\nSupervisor Agent update complete (endpoint already running).")
+        elif online:
             print("\nSupervisor Agent is ONLINE and ready.")
         else:
             print(f"\nCheck status manually:")
-            print(f"  GET {TARGET_WORKSPACE_URL}/api/2.0/agent-evaluation/tile-resources/{tile_id}")
+            print(f"  GET {TARGET_WORKSPACE_URL}/api/2.0/serving-endpoints/{endpoint_name}")
     else:
         print("\nSupervisor Agent is ONLINE and ready.")
 

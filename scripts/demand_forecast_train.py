@@ -241,6 +241,13 @@ with mlflow.start_run(run_name="demand_forecast_v1") as run:
     mlflow.log_metric("train_mae", mae)
     mlflow.log_metric("train_rmse", rmse)
 
+    # Log training table as input dataset to enable UC lineage
+    training_dataset = mlflow.data.from_spark(
+        spark.table("retail_consumer_goods.supply_chain_control_tower.demand_training_data"),
+        table_name="retail_consumer_goods.supply_chain_control_tower.demand_training_data",
+    )
+    mlflow.log_input(training_dataset, context="training")
+
     mlflow.pyfunc.log_model(
         artifact_path="demand_forecast",
         python_model=pyfunc_model,
