@@ -7,6 +7,10 @@ in a target Databricks workspace.
 Captured from source workspace on 2026-02-19.
 Source tile_id: 5fba20e2-a75d-478e-a25c-deb9a9fb92ae
 
+Last deployed to sobeysagentsdbw on 2026-02-23.
+Current tile_id: db1b25a7-b412-43be-929f-e430e1b42235
+Current endpoint: mas-db1b25a7-endpoint
+
 PREREQUISITES
 =============
 The target workspace must have the following resources before running:
@@ -71,17 +75,30 @@ DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN", "")
 # These are workspace-scoped IDs and differ from the source workspace.
 # To find them: use the Genie UI URL (the ID is in the path) or the Genie API.
 GENIE_SPACE_IDS = {
-    "dc_inventory":    "REPLACE_WITH_TARGET_DC_INVENTORY_GENIE_ID",
-    "dc_shipment_plan":"REPLACE_WITH_TARGET_DC_SHIPMENT_PLAN_GENIE_ID",
-    "incoming_supply": "REPLACE_WITH_TARGET_INCOMING_SUPPLY_GENIE_ID",
-    "link_customer":   "REPLACE_WITH_TARGET_LINK_CUSTOMER_GENIE_ID",
-    "supplier_orders": "REPLACE_WITH_TARGET_SUPPLIER_ORDERS_GENIE_ID",
+    "dc_inventory":    "01f10d0ff1901eb193810415e62b6c99",
+    "dc_shipment_plan":"01f10d0ff41a1f1bad465c9884729e7e",
+    "incoming_supply": "01f10d0ff2f119a5b62015b6d842e697",
+    "link_customer":   "01f10d0ff5771c2e807536dd10bff876",
+    "supplier_orders": "01f10d0ff6ae1729b72b938a9c294daf",
 }
 
 # UC Function location — update if using a different catalog/schema
 UC_FUNCTION_CATALOG = "retail_consumer_goods"
 UC_FUNCTION_SCHEMA  = "supply_chain_control_tower"
-UC_FUNCTION_NAME    = "predict_demand"
+UC_FUNCTION_NAME    = "predict_demand"  # legacy name used as default
+
+# Additional UC Functions for supplier order actions and operational system integrations
+# All located at UC_FUNCTION_CATALOG.UC_FUNCTION_SCHEMA.<name>
+UC_SUPPLY_CHAIN_FUNCTIONS = [
+    "place_supplier_order",
+    "expedite_supplier_order",
+    "get_order_from_AWR",
+    "send_order_to_AWR",
+    "get_order_from_CAO",
+    "send_order_to_CAO",
+    "get_order_from_SAP",
+    "send_order_to_SAP",
+]
 
 # MCP Connection name registered in UC
 MCP_CONNECTION_NAME = "tavily_mcp"
@@ -95,7 +112,7 @@ MAS_NAME = "SCC_Tower_Supply_Chain_Supervisor"
 
 MAS_DESCRIPTION = (
     '''
-    This agent is an expert at planning supply chain scenarios. Looks at demand and supply and helps to make effective decisions. Routes queries to specialized Genie spaces covering DC inventory, shipment planning, incoming supply, customer-DC relationships, and supplier orders. Also includes demand forecasting powered by ML and real-time weather data from Tavily. 
+    This agent is an expert at planning supply chain scenarios. Looks at demand and supply and helps to make effective decisions. Routes queries to specialized Genie spaces covering DC inventory, shipment planning, incoming supply, customer-DC relationships, and supplier orders. Also includes demand forecasting powered by ML and real-time weather data from Tavily. Can take action by placing and expediting supplier orders, and by retrieving and sending orders to operational systems (AWR, CAO, SAP).
     '''
 )
 
@@ -114,7 +131,23 @@ You are the Supply Chain Control Tower supervisor. Route user queries to the mos
 
 6. **mcp-tavily-mcp** — Retrieval of weather information required for demand forecasting model inference.
 
-7. **demand_forecast** — Predicts product demand (number of units) for a given customer, product, date, and weather forecast 
+7. **demand_forecast** — Predicts product demand (number of units) for a given customer, product, date, and weather forecast
+
+8. **place_supplier_order** — Places a new purchase order with a supplier for a given product and quantity. Use when the user wants to create or submit a new supplier order.
+
+9. **expedite_supplier_order** — Expedites an existing supplier order by PO number. Use when the user wants to rush or prioritize an existing order.
+
+10. **get_order_from_AWR** — Retrieves the current order from the AWR (Automated Warehouse Replenishment) system. Use when the user asks about the order in AWR or wants to review what AWR has on record.
+
+11. **send_order_to_AWR** — Sends a pending order to the AWR (Automated Warehouse Replenishment) system. Use when the user wants to push or submit an order to AWR.
+
+12. **get_order_from_CAO** — Retrieves the current order from the CAO (Computer Assisted Ordering) system. Use when the user asks about the order in CAO or wants to review what CAO has on record.
+
+13. **send_order_to_CAO** — Sends a pending order to the CAO (Computer Assisted Ordering) system. Use when the user wants to push or submit an order to CAO.
+
+14. **get_order_from_SAP** — Retrieves the current order from the SAP system. Use when the user asks about the order in SAP or wants to review what SAP has on record.
+
+15. **send_order_to_SAP** — Sends a pending order to the SAP system. Use when the user wants to push or submit an order to SAP.
 
 If a query spans multiple domains (e.g., comparing inventory at a DC against incoming supply to identify risks), call the relevant agents in sequence and synthesize their responses.
 
@@ -207,6 +240,86 @@ AGENT_CONFIGS = [
             "Transportation rates and all the real time data for the agent"
         ),
     },
+    {
+        "name": "place_supplier_order",
+        "type": "uc_function",
+        "uc_fn": "place_supplier_order",
+        "description": (
+            "Places a new purchase order with a supplier for a given product name and unit amount. "
+            "Returns an order confirmation number and the supplier name. "
+            "Use this when the user wants to create or submit a new supplier order."
+        ),
+    },
+    {
+        "name": "expedite_supplier_order",
+        "type": "uc_function",
+        "uc_fn": "expedite_supplier_order",
+        "description": (
+            "Expedites an existing supplier order by providing a PO number. "
+            "Sends a priority request to the supplier to reduce lead time. "
+            "Use this when the user wants to rush or accelerate an existing order."
+        ),
+    },
+    {
+        "name": "get_order_from_AWR",
+        "type": "uc_function",
+        "uc_fn": "get_order_from_AWR",
+        "description": (
+            "Retrieves the current order from the AWR (Automated Warehouse Replenishment) system. "
+            "Returns order details including PO number, product, quantity, status, supplier, and expected delivery. "
+            "Use when the user asks about what AWR has on record or wants to review the AWR order."
+        ),
+    },
+    {
+        "name": "send_order_to_AWR",
+        "type": "uc_function",
+        "uc_fn": "send_order_to_AWR",
+        "description": (
+            "Sends a pending order to the AWR (Automated Warehouse Replenishment) system. "
+            "Returns a confirmation that the order was successfully submitted to AWR. "
+            "Use when the user wants to push or submit an order into AWR."
+        ),
+    },
+    {
+        "name": "get_order_from_CAO",
+        "type": "uc_function",
+        "uc_fn": "get_order_from_CAO",
+        "description": (
+            "Retrieves the current order from the CAO (Computer Assisted Ordering) system. "
+            "Returns order details including PO number, product, quantity, status, supplier, and expected delivery. "
+            "Use when the user asks about what CAO has on record or wants to review the CAO order."
+        ),
+    },
+    {
+        "name": "send_order_to_CAO",
+        "type": "uc_function",
+        "uc_fn": "send_order_to_CAO",
+        "description": (
+            "Sends a pending order to the CAO (Computer Assisted Ordering) system. "
+            "Returns a confirmation that the order was successfully submitted to CAO. "
+            "Use when the user wants to push or submit an order into CAO."
+        ),
+    },
+    {
+        "name": "get_order_from_SAP",
+        "type": "uc_function",
+        "uc_fn": "get_order_from_SAP",
+        "description": (
+            "Retrieves the current order from the SAP system. "
+            "Returns order details including SAP document number, product, quantity, status, supplier, and expected delivery. "
+            "Use when the user asks about what SAP has on record or wants to review the SAP order."
+        ),
+    },
+    {
+        "name": "send_order_to_SAP",
+        "type": "uc_function",
+        "uc_fn": "send_order_to_SAP",
+        "description": (
+            "Sends a pending order to the SAP system. "
+            "Returns a confirmation including the SAP document number created. "
+            "Use when the user wants to push or submit an order into SAP."
+        ),
+    },
 ]
 
 # Example questions from source (used for routing evaluation)
@@ -275,7 +388,7 @@ def validate_prerequisites():
 def build_agent_list():
     """Convert AGENT_CONFIGS into the format expected by the Agent Bricks API."""
     agents = []
-    uc_fn = f"{UC_FUNCTION_CATALOG}.{UC_FUNCTION_SCHEMA}.{UC_FUNCTION_NAME}"
+    default_uc_fn = f"{UC_FUNCTION_CATALOG}.{UC_FUNCTION_SCHEMA}.{UC_FUNCTION_NAME}"
 
     for cfg in AGENT_CONFIGS:
         agent = {"name": cfg["name"], "description": cfg["description"]}
@@ -283,7 +396,13 @@ def build_agent_list():
         if cfg["type"] == "genie_space":
             agent["genie_space_id"] = GENIE_SPACE_IDS[cfg["name"]]
         elif cfg["type"] == "uc_function":
-            agent["uc_function_name"] = uc_fn
+            # Use per-agent function name if provided, else fall back to default
+            fn_name = (
+                f"{UC_FUNCTION_CATALOG}.{UC_FUNCTION_SCHEMA}.{cfg['uc_fn']}"
+                if "uc_fn" in cfg
+                else default_uc_fn
+            )
+            agent["uc_function_name"] = fn_name
         elif cfg["type"] == "mcp_connection":
             agent["connection_name"] = MCP_CONNECTION_NAME
         else:
