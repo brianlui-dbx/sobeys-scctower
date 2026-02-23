@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_sidebar/planner")({
 });
 
 interface ChatStep {
-  type: "thinking" | "tool_call";
+  type: "thinking" | "tool_call" | "genie_call";
   title: string;
   content: string;
 }
@@ -38,6 +38,7 @@ function StepIcon({ type }: { type: ChatStep["type"] }) {
   switch (type) {
     case "thinking":
       return <Brain className="h-3.5 w-3.5 text-violet-500" />;
+    case "genie_call":
     case "tool_call":
       return <Wrench className="h-3.5 w-3.5 text-blue-500" />;
     default:
@@ -49,8 +50,10 @@ function StepLabel({ step }: { step: ChatStep }) {
   switch (step.type) {
     case "thinking":
       return "Reasoning";
-    case "tool_call":
+    case "genie_call":
       return `Querying ${step.title}`;
+    case "tool_call":
+      return `Executing ${step.title}`;
     default:
       return step.title;
   }
@@ -191,7 +194,7 @@ function PlannerChat() {
         const task = await pollRes.json();
 
         const steps: ChatStep[] = (task.steps || []).filter(
-          (s: ChatStep) => s.type === "thinking" || s.type === "tool_call",
+          (s: ChatStep) => s.type === "thinking" || s.type === "tool_call" || s.type === "genie_call",
         );
 
         if (task.status === "done") {
