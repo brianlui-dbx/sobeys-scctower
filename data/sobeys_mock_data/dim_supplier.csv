@@ -1,0 +1,21 @@
+supplier_id,name,location,latitude,longitude
+SUPP001,Green Valley Produce Co.,"Leamington, ON",42.0534,-82.5996
+SUPP002,FreshHarvest Farms,"Niagara-on-the-Lake, ON",43.2551,-79.0715
+SUPP003,Sunrise Organic Growers,"Abbotsford, BC",49.0504,-122.3045
+SUPP004,Nature's Bounty Distributors,"Lethbridge, AB",49.6935,-112.8418
+SUPP005,Golden Fields Agriculture,"Kelowna, BC",49.888,-119.496
+SUPP006,Prime Produce Partners,"Chilliwack, BC",49.1579,-121.9514
+SUPP007,Coastal Fresh Farms,"Kentville, NS",45.077,-64.496
+SUPP008,Mountain View Organics,"Holland Marsh, ON",44.1167,-79.5333
+SUPP009,Riverside Growers Co-op,"Summerland, BC",49.6006,-119.6778
+SUPP010,Valley Fresh Produce,"Oliver, BC",49.1828,-119.5504
+SUPP011,Heritage Farms Supply,"Portage la Prairie, MB",49.9728,-98.2918
+SUPP012,Evergreen Produce Group,"Brandon, MB",49.844,-99.953
+SUPP013,Pacific Fresh Distributors,"Delta, BC",49.0847,-123.0586
+SUPP014,Summit Agriculture Co.,"St. Catharines, ON",43.1594,-79.2469
+SUPP015,Desert Fresh Farms,"Medicine Hat, AB",50.0405,-110.6764
+SUPP016,Heartland Produce Alliance,"Morden, MB",49.1919,-98.1011
+SUPP017,Ocean Breeze Organics,"Wolfville, NS",45.0868,-64.3648
+SUPP018,Prairie Fresh Growers,"Cornwall, ON",45.0275,-74.74
+SUPP019,Sunshine Harvest Co.,"Trenton, ON",44.1007,-77.5728
+SUPP020,Lakeside Farm Collective,"Stratford, PE",46.2167,-63.0867

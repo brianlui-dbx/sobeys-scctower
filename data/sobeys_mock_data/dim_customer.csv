@@ -1,0 +1,51 @@
+customer_id,name,location,latitude,longitude
+CUST001,Sobeys Markham,"Markham, ON",43.8561,-79.337
+CUST002,Farm Boy Ottawa,"Ottawa, ON",45.4215,-75.6972
+CUST003,FreshCo Brampton,"Brampton, ON",43.7315,-79.7624
+CUST004,Longo's Vaughan,"Vaughan, ON",43.8361,-79.4983
+CUST005,Sobeys Burlington,"Burlington, ON",43.3255,-79.799
+CUST006,Farm Boy Kingston,"Kingston, ON",44.2312,-76.486
+CUST007,FreshCo Hamilton,"Hamilton, ON",43.2557,-79.8711
+CUST008,Sobeys Barrie,"Barrie, ON",44.3894,-79.6903
+CUST009,Foodland Peterborough,"Peterborough, ON",44.3091,-78.3197
+CUST010,Longo's Mississauga,"Mississauga, ON",43.589,-79.6441
+CUST011,Safeway Vancouver,"Vancouver, BC",49.2827,-123.1207
+CUST012,Thrifty Foods Victoria,"Victoria, BC",48.4284,-123.3656
+CUST013,FreshCo Surrey,"Surrey, BC",49.1913,-122.849
+CUST014,Safeway Kelowna,"Kelowna, BC",49.888,-119.496
+CUST015,Sobeys Kamloops,"Kamloops, BC",50.6745,-120.3273
+CUST016,Thrifty Foods Nanaimo,"Nanaimo, BC",49.1659,-123.9401
+CUST017,Safeway Prince George,"Prince George, BC",53.9171,-122.7497
+CUST018,FreshCo Abbotsford,"Abbotsford, BC",49.0504,-122.3045
+CUST019,Safeway Langley,"Langley, BC",49.1044,-122.6615
+CUST020,Thrifty Foods Courtenay,"Courtenay, BC",49.6928,-124.9926
+CUST021,IGA Laval,"Laval, QC",45.6066,-73.7124
+CUST022,IGA Longueuil,"Longueuil, QC",45.5312,-73.5185
+CUST023,Rachelle Béry Plateau,"Montreal, QC",45.5225,-73.5826
+CUST024,IGA Gatineau,"Gatineau, QC",45.4765,-75.7013
+CUST025,IGA Sherbrooke,"Sherbrooke, QC",45.4042,-71.8929
+CUST026,IGA Trois-Rivières,"Trois-Rivières, QC",46.3432,-72.5419
+CUST027,Les Marchés Tradition Saguenay,"Saguenay, QC",48.4279,-71.0548
+CUST028,IGA Québec City,"Québec City, QC",46.8139,-71.208
+CUST029,IGA Drummondville,"Drummondville, QC",45.8838,-72.4843
+CUST030,IGA Rimouski,"Rimouski, QC",48.449,-68.523
+CUST031,Sobeys Dartmouth,"Dartmouth, NS",44.6714,-63.5772
+CUST032,Sobeys New Minas,"New Minas, NS",45.0568,-64.4268
+CUST033,Foodland Antigonish,"Antigonish, NS",45.6219,-61.9984
+CUST034,Sobeys Moncton,"Moncton, NB",46.0878,-64.7782
+CUST035,Sobeys Charlottetown,"Charlottetown, PE",46.2382,-63.1311
+CUST036,Needs Convenience Sydney,"Sydney, NS",46.1368,-60.1942
+CUST037,Lawtons Drugs Fredericton,"Fredericton, NB",45.9636,-66.6431
+CUST038,Sobeys Saint John,"Saint John, NB",45.2733,-66.0633
+CUST039,Foodland Truro,"Truro, NS",45.3647,-63.28
+CUST040,Sobeys Corner Brook,"Corner Brook, NL",48.951,-57.953
+CUST041,Sobeys Calgary,"Calgary, AB",51.0447,-114.0719
+CUST042,Safeway Edmonton,"Edmonton, AB",53.5461,-113.4938
+CUST043,FreshCo Winnipeg,"Winnipeg, MB",49.8951,-97.1384
+CUST044,Sobeys Red Deer,"Red Deer, AB",52.2681,-113.8112
+CUST045,Safeway Saskatoon,"Saskatoon, SK",52.1332,-106.67
+CUST046,Sobeys Lethbridge,"Lethbridge, AB",49.6935,-112.8418
+CUST047,Safeway Regina,"Regina, SK",50.4452,-104.6189
+CUST048,FreshCo Brandon,"Brandon, MB",49.844,-99.953
+CUST049,Sobeys Medicine Hat,"Medicine Hat, AB",50.0405,-110.6764
+CUST050,Safeway Grande Prairie,"Grande Prairie, AB",55.1707,-118.7946

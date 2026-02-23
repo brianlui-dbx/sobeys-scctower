@@ -1,0 +1,7 @@
+location_id,location_name,type,location,latitude,longitude
+DC001,"Dartmouth, NS",DC,"Dartmouth, NS",44.6714,-63.5772
+DC002,"Mississauga, ON",DC,"Mississauga, ON",43.589,-79.6441
+DC003,"Calgary, AB",DC,"Calgary, AB",51.0447,-114.0719
+DC004,"Laval, QC",DC,"Laval, QC",45.6066,-73.7124
+DC005,"Surrey, BC",DC,"Surrey, BC",49.1913,-122.849
+DOCK001,Montreal Dock,Dock,"Montreal, QC",45.555,-73.525
