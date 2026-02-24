@@ -29,6 +29,41 @@
       "id": "600360952311593",
       "created_at": "2026-02-23T19:00:11.348043+00:00",
       "updated_at": "2026-02-23T19:00:11.348043+00:00"
+    },
+    {
+      "type": "genie_space",
+      "name": "Supplier Orders_MV",
+      "id": "01f11128fff11669bb421bfdac219435",
+      "created_at": "2026-02-24T02:32:01.777752+00:00",
+      "updated_at": "2026-02-24T02:32:01.777752+00:00"
+    },
+    {
+      "type": "genie_space",
+      "name": "Link_Customer_MV",
+      "id": "01f1112901131aee806edc3dd6762147",
+      "created_at": "2026-02-24T02:32:03.620858+00:00",
+      "updated_at": "2026-02-24T02:32:03.620858+00:00"
+    },
+    {
+      "type": "genie_space",
+      "name": "DC_Shipment_plan_MV",
+      "id": "01f11129024a1be0bf19252800ebee35",
+      "created_at": "2026-02-24T02:32:05.659081+00:00",
+      "updated_at": "2026-02-24T02:32:05.659081+00:00"
+    },
+    {
+      "type": "genie_space",
+      "name": "Incoming Supply to DC_MV",
+      "id": "01f11129035e12a3a737184a7a360a86",
+      "created_at": "2026-02-24T02:32:07.473203+00:00",
+      "updated_at": "2026-02-24T02:32:07.473203+00:00"
+    },
+    {
+      "type": "genie_space",
+      "name": "DC_inventory_MV",
+      "id": "01f1112904491666a86a7e0bfcac03a9",
+      "created_at": "2026-02-24T02:32:08.995041+00:00",
+      "updated_at": "2026-02-24T02:32:08.995041+00:00"
     }
   ]
 }

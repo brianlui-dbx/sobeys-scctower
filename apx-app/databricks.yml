@@ -22,7 +22,7 @@ resources:
             permission: "CAN_USE"
         - name: "mas-endpoint"
           serving_endpoint:
-            name: "mas-db1b25a7-endpoint"
+            name: "mas-bb7b182b-endpoint"
             permission: "CAN_QUERY"
 
 targets:

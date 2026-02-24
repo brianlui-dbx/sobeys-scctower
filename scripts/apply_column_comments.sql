@@ -5,27 +5,27 @@
 -- ALTER TABLE does not work on views; use COMMENT ON COLUMN instead.
 
 USE CATALOG retail_consumer_goods;
-USE SCHEMA supply_chain_control_tower;
+USE SCHEMA `default`;
 
 -- batch_events_v1
 COMMENT ON COLUMN batch_events_v1.record_id IS 'A unique identifier for each event record, allowing for easy reference and tracking of individual entries.';
-COMMENT ON COLUMN batch_events_v1.batch_id IS 'Identifies the specific batch associated with the event, which is crucial for understanding the context of the product journey.';
+COMMENT ON COLUMN batch_events_v1.batch_id IS 'Identifies the specific batch associated with the event, which is crucial for understanding the context of the product''s journey.';
 COMMENT ON COLUMN batch_events_v1.product_id IS 'Represents the unique identifier for the product involved in the event, facilitating product-specific analysis.';
 COMMENT ON COLUMN batch_events_v1.product_name IS 'The name of the product associated with the event, providing a more descriptive context for analysis and reporting.';
-COMMENT ON COLUMN batch_events_v1.event IS 'Describes the type of event that occurred during the product journey, which is essential for tracking and analyzing supply chain activities.';
+COMMENT ON COLUMN batch_events_v1.event IS 'Describes the type of event that occurred during the product''s journey, which is essential for tracking and analyzing supply chain activities.';
 COMMENT ON COLUMN batch_events_v1.event_time_cst IS 'Records the timestamp of when the event occurred, allowing for chronological tracking and analysis of events over time.';
 COMMENT ON COLUMN batch_events_v1.entity_involved IS 'Indicates the type of entity that was involved in the event, which can include suppliers, distributors, or other stakeholders in the supply chain.';
 COMMENT ON COLUMN batch_events_v1.entity_name IS 'The name of the specific entity involved in the event, providing clarity on which organization or individual was part of the interaction.';
 COMMENT ON COLUMN batch_events_v1.entity_location IS 'Describes the geographical location of the entity involved in the event, which is important for understanding the context of the supply chain.';
-COMMENT ON COLUMN batch_events_v1.entity_latitude IS 'Provides the latitude coordinate of the entity location, enabling precise geographical analysis of events.';
-COMMENT ON COLUMN batch_events_v1.entity_longitude IS 'Provides the longitude coordinate of the entity location, complementing the latitude for accurate mapping and geographical insights.';
+COMMENT ON COLUMN batch_events_v1.entity_latitude IS 'Provides the latitude coordinate of the entity''s location, enabling precise geographical analysis of events.';
+COMMENT ON COLUMN batch_events_v1.entity_longitude IS 'Provides the longitude coordinate of the entity''s location, complementing the latitude for accurate mapping and geographical insights.';
 COMMENT ON COLUMN batch_events_v1.event_time_cst_readable IS 'Human-readable format of the event timestamp, simplifying interpretation and analysis of chronological data.';
 
 -- dim_customer
 COMMENT ON COLUMN dim_customer.name IS 'The name of the specific entity involved in the event, providing clarity on which organization or individual was part of the interaction.';
 COMMENT ON COLUMN dim_customer.location IS 'Describes the geographical location of the entity involved in the event, which is important for understanding the context of the supply chain.';
-COMMENT ON COLUMN dim_customer.latitude IS 'Provides the latitude coordinate of the entity location, enabling precise geographical analysis of events.';
-COMMENT ON COLUMN dim_customer.longitude IS 'Provides the longitude coordinate of the entity location, complementing the latitude for accurate mapping and geographical insights.';
+COMMENT ON COLUMN dim_customer.latitude IS 'Provides the latitude coordinate of the entity''s location, enabling precise geographical analysis of events.';
+COMMENT ON COLUMN dim_customer.longitude IS 'Provides the longitude coordinate of the entity''s location, complementing the latitude for accurate mapping and geographical insights.';
 
 -- dim_product
 COMMENT ON COLUMN dim_product.product_id IS 'Represents the unique identifier for the product involved in the event, facilitating product-specific analysis.';
@@ -35,18 +35,18 @@ COMMENT ON COLUMN dim_product.cost_per_unit IS 'The price per unit of the produc
 -- dim_storage_location
 COMMENT ON COLUMN dim_storage_location.location_name IS 'The name of the specific entity involved in the event, providing clarity on which organization or individual was part of the interaction.';
 COMMENT ON COLUMN dim_storage_location.location IS 'Describes the geographical location of the entity involved in the event, which is important for understanding the context of the supply chain.';
-COMMENT ON COLUMN dim_storage_location.latitude IS 'Provides the latitude coordinate of the entity location, enabling precise geographical analysis of events.';
-COMMENT ON COLUMN dim_storage_location.longitude IS 'Provides the longitude coordinate of the entity location, complementing the latitude for accurate mapping and geographical insights.';
+COMMENT ON COLUMN dim_storage_location.latitude IS 'Provides the latitude coordinate of the entity''s location, enabling precise geographical analysis of events.';
+COMMENT ON COLUMN dim_storage_location.longitude IS 'Provides the longitude coordinate of the entity''s location, complementing the latitude for accurate mapping and geographical insights.';
 
 -- dim_supplier
 COMMENT ON COLUMN dim_supplier.name IS 'The name of the specific entity involved in the event, providing clarity on which organization or individual was part of the interaction.';
 COMMENT ON COLUMN dim_supplier.location IS 'Describes the geographical location of the entity involved in the event, which is important for understanding the context of the supply chain.';
-COMMENT ON COLUMN dim_supplier.latitude IS 'Provides the latitude coordinate of the entity location, enabling precise geographical analysis of events.';
-COMMENT ON COLUMN dim_supplier.longitude IS 'Provides the longitude coordinate of the entity location, complementing the latitude for accurate mapping and geographical insights.';
+COMMENT ON COLUMN dim_supplier.latitude IS 'Provides the latitude coordinate of the entity''s location, enabling precise geographical analysis of events.';
+COMMENT ON COLUMN dim_supplier.longitude IS 'Provides the longitude coordinate of the entity''s location, complementing the latitude for accurate mapping and geographical insights.';
 
 -- fact_dc_inventory
 COMMENT ON COLUMN fact_dc_inventory.product_id IS 'Represents the unique identifier for the product involved in the event, facilitating product-specific analysis.';
-COMMENT ON COLUMN fact_dc_inventory.dc_id IS 'Identifies the location associated with the shipping schedule, which is essential for logistics and distribution planning. Shows the DC location.';
+COMMENT ON COLUMN fact_dc_inventory.dc_id IS 'Identifies the location associated with the shipping schedule, which is essential for logistics and distribution planning.Shows the DC location';
 COMMENT ON COLUMN fact_dc_inventory.allocated_qty IS 'Indicates the quantity of products that have been allocated for specific orders or purposes, helping in inventory management.';
 COMMENT ON COLUMN fact_dc_inventory.safety_stock IS 'Represents the minimum quantity of a product that must be kept on hand to prevent stockouts, ensuring availability during demand fluctuations.';
 COMMENT ON COLUMN fact_dc_inventory.excess_qty IS 'Shows the quantity of products that exceed the desired inventory level, which can indicate overstock situations that may need addressing.';
@@ -66,7 +66,7 @@ COMMENT ON COLUMN fact_incoming_supply.expected_arrival_date IS 'Indicates the e
 -- fact_shipping_schedule
 COMMENT ON COLUMN fact_shipping_schedule.schedule_id IS 'A unique identifier for each shipping schedule entry, allowing for easy tracking and reference of specific schedules.';
 COMMENT ON COLUMN fact_shipping_schedule.product_id IS 'Represents the unique identifier for the product involved in the event, facilitating product-specific analysis.';
-COMMENT ON COLUMN fact_shipping_schedule.location_id IS 'Identifies the location associated with the shipping schedule, which is essential for logistics and distribution planning. Shows the DC location.';
+COMMENT ON COLUMN fact_shipping_schedule.location_id IS 'Identifies the location associated with the shipping schedule, which is essential for logistics and distribution planning.Shows the DC location';
 COMMENT ON COLUMN fact_shipping_schedule.customer_id IS 'Denotes the unique identifier for the customer receiving the shipment, enabling customer-specific tracking and order management.';
 COMMENT ON COLUMN fact_shipping_schedule.schedule_date IS 'Specifies the exact date when the shipment is scheduled to occur, crucial for planning and operational efficiency.';
 COMMENT ON COLUMN fact_shipping_schedule.qty IS 'Represents the quantity of products scheduled for shipping, providing insight into order sizes and inventory management.';
@@ -94,8 +94,8 @@ COMMENT ON COLUMN inventory_realtime_v1.longitude IS 'The longitude coordinate o
 COMMENT ON COLUMN inventory_realtime_v1.destination IS 'The intended delivery location for the shipment, important for route planning and logistics management.';
 COMMENT ON COLUMN inventory_realtime_v1.time_remaining_to_destination_hours IS 'Estimates the remaining time in hours until the shipment reaches its destination, aiding in delivery planning.';
 COMMENT ON COLUMN inventory_realtime_v1.batch_id IS 'An identifier for the batch of shipments, useful for grouping and managing multiple shipments together.';
-COMMENT ON COLUMN inventory_realtime_v1.transit_status IS 'Represents the movement progress of the shipment within its transit phase, indicating stages such as Delayed or ontime.';
+COMMENT ON COLUMN inventory_realtime_v1.transit_status IS 'Represents the movement progress of the shipment within its transit phase, indicating stages such as Delayed , ontime.';
 
 -- link_dc_customer
-COMMENT ON COLUMN link_dc_customer.location_id IS 'Shows the DC location.';
-COMMENT ON COLUMN link_dc_customer.customer_id IS 'Denotes the unique identifier for the customer.';
+COMMENT ON COLUMN link_dc_customer.location_id IS 'Shows the DC location';
+COMMENT ON COLUMN link_dc_customer.customer_id IS 'Denotes the unique identifier for the customer';

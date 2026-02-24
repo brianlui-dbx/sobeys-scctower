@@ -48,7 +48,7 @@ class AppConfig(BaseSettings):
     schema_name: str = Field(default="supply_chain_control_tower", validation_alias="SOBEYS_SCCTOWER_SCHEMA")
     warehouse_id: str = Field(default="b9771bcf4a3a5399")
     chat_endpoint: str = Field(default="https://adb-7405613286317055.15.azuredatabricks.net/serving-endpoints")
-    chat_model: str = Field(default="mas-5fba20e2-endpoint")
+    chat_model: str = Field(default="mas-bb7b182b-endpoint")
     general_model: str = Field(default="databricks-gpt-5-1")
 
     @property
